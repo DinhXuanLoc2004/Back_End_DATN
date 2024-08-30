@@ -5,7 +5,6 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
-<<<<<<< HEAD
     "compression": "^1.7.4",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
@@ -18,14 +17,5 @@
     "nodemailer": "^6.9.14",
     "nodemon": "^3.1.4",
     "otp-generator": "^4.0.1"
-=======
-    "crypto": "^1.0.1",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "lodash": "^4.17.21",
-    "mongoose": "^8.5.3",
-    "nodemon": "^3.1.4"
->>>>>>> 26ecc556dab57d8edd0462732b7d1117a6aa0f2c
   }
 }

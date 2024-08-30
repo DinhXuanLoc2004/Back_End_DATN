@@ -4,7 +4,7 @@ const userModel = require("../models/user.model")
 const usersModel = require("../models/user.model")
 const { hashData, selectFilesData, compareData } = require("../utils")
 const OtpService = require("./otp.service")
-const { generateToken } = require("./token.service")
+const TokenService = require("./token.service")
 
 class AccessService {
 
@@ -14,8 +14,8 @@ class AccessService {
         const comparePassword = await compareData({ data: password, hashData: userHoder.password })
         if (!comparePassword) throw new AuthFailureError('Password is not match!')
         // Tạo hai loại accessToken và refreshToken để trả về cho phía FE
-        const accessToken = await generateToken({ _id: userHoder._id }, process.env.PRIVATE_KEY, '1h')
-        const refreshToken = await generateToken({ _id: userHoder._id }, process.env.PUBLIC_KEY, '30 days')
+        const accessToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PRIVATE_KEY, '1h')
+        const refreshToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PUBLIC_KEY, '30 days')
         return {
             user: {
                 _id: userHoder._id,

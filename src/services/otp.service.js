@@ -1,10 +1,9 @@
 const otpGenerator = require("otp-generator")
 const otpModel = require("../models/otp.model")
 const { hashData, compareData, addMinutes, selectFilesData } = require("../utils")
-const { NotFoundError, AuthFailureError, BadRequestError } = require("../core/error.reponse")
+const { NotFoundError, AuthFailureError } = require("../core/error.reponse")
 const nodemailer = require('nodemailer');
 const userModel = require('../models/user.model');
-const { OK } = require('../core/success.response');
 
 class OtpService {
     static createAndSendOtp = async ({ userId }) => {

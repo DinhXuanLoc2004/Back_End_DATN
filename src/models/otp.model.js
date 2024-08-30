@@ -1,5 +1,4 @@
 const { Schema, model, Types } = require('mongoose')
-const { addMinutes } = require('../utils')
 
 const DOCUMENT_NAME = 'Otp'
 const COLLECTION_NAME = 'Otps'

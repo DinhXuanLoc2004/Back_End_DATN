@@ -1,18 +1,34 @@
 const JWT = require('jsonwebtoken')
-const { ConflictRequestError } = require('../core/error.reponse')
+const { ConflictRequestError, AuthFailureError } = require('../core/error.reponse')
+const tokenModel = require('../models/token.model')
 
-const generateToken = async (userInfo, secretSignature, tokenLife) => { 
-    const token = JWT.sign(userInfo, secretSignature, {algorithm: 'HS256', expiresIn: tokenLife})
-    if (!token) throw new ConflictRequestError('Generate Token Error!')
-    return token
+class TokenService {
+    static ref_accessToken = async (refreshToken) => {
+        const verifyRefreshToken = await this.verifyToken(refreshToken, process.env.PUBLIC_KEY, 'refreshToken')
+        const accessToken = await this.generateToken({ _id: verifyRefreshToken._id }, process.env.PRIVATE_KEY, '1h')
+        return {
+            accessToken: accessToken
+        }
+    }
+
+    static generateToken = async (userInfo, secretSignature, tokenLife) => {
+        const token = JWT.sign(userInfo, secretSignature, { algorithm: 'HS256', expiresIn: tokenLife })
+        if (!token) throw new ConflictRequestError('Generate Token Error!')
+        return token
+    }
+
+    static verifyToken = async (token, secretSignature, typeToken) => {
+        const TokenExpiredError = 'TokenExpiredError'
+        try {
+            return JWT.verify(token, secretSignature)
+        } catch (error) {
+            if (error.name === TokenExpiredError) {
+                throw new AuthFailureError(`${typeToken ?? 'Token'} Expired!`)
+            } else {
+                throw new AuthFailureError(`${typeToken ?? 'Token'} Invalid!`)
+            }
+        }
+    }
 }
 
-/**
- * Verify ở đây hiểu đơn giản là cái token được tạo ra có đúng với cái chữ ký bí mật secretSignature trong
- * dự án hay không
- */
-const verifyToken = async (token, secretSignature, ) => { 
-    return JWT.verify(token, secretSignature)
-}
-
-module.exports = { generateToken, verifyToken   }
+module.exports = TokenService
