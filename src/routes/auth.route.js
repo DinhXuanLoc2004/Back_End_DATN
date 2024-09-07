@@ -1,6 +1,6 @@
 const express = require("express");
-const { asyncHandler } = require("../../utils");
-const accessController = require("../../controller/access.controller");
+const { asyncHandler } = require("../utils");
+const accessController = require("../controller/access.controller");
 const router = express.Router()
 
 router.post('/signup', asyncHandler(accessController.signUp))

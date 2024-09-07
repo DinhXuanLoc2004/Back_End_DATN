@@ -1,9 +1,9 @@
 const otpGenerator = require("otp-generator")
-const otpModel = require("../models/otp.model")
+const { otpModel } = require("../models/otp.model")
 const { hashData, compareData, addMinutes, selectFilesData } = require("../utils")
 const { NotFoundError, AuthFailureError } = require("../core/error.reponse")
-const nodemailer = require('nodemailer');
-const userModel = require('../models/user.model');
+const { userModel } = require('../models/user.model');
+const SendMailService = require("./send_mail.service");
 
 class OtpService {
     static createAndSendOtp = async ({ userId }) => {
@@ -16,19 +16,10 @@ class OtpService {
             upperCaseAlphabets: false,
             specialChars: false
         })
-        const transporter = nodemailer.createTransport({
-            service: 'Gmail',
-            auth: {
-                user: 'dinhxuanlocct@gmail.com',
-                pass: process.env.APPLICATION_PASSWORD ?? ''
-            }
-        })
-        const mailOptions = {
-            from: 'dinhxuanlocct@gmail.com',
-            to: user.email,
-            subject: 'Send OTP Code',
-            text: `Your OTP code is: ${OTP}`,
-            html: `<div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+        await SendMailService.sendEmail(user.email,
+            'Send OTP Code',
+            `Your OTP code is: ${OTP}`,
+            `<div style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
             <h2>Your OTP Code</h2>
             <p>Dear ${user.name},</p>
             <p>Your OTP code is:</p>
@@ -40,9 +31,7 @@ class OtpService {
             <br>
             <p>Best regards,</p>
             <p>Your Company Name</p>
-        </div>`
-        };
-        transporter.sendMail(mailOptions)
+        </div>`)
         const otpHashed = await hashData(OTP)
         const newOTP = await otpModel.create({
             userId: userId,
@@ -52,7 +41,7 @@ class OtpService {
         })
         if (newOTP) {
             return {
-                newOTP: selectFilesData({fileds: ['userId', 'endTime', 'createAt'], object: newOTP})
+                newOTP: selectFilesData({ fileds: ['endTime', 'createAt'], object: newOTP })
             }
         }
     }

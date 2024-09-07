@@ -1,6 +1,5 @@
 const JWT = require('jsonwebtoken')
 const { ConflictRequestError, AuthFailureError } = require('../core/error.reponse')
-const tokenModel = require('../models/token.model')
 
 class TokenService {
     static ref_accessToken = async (refreshToken) => {
@@ -12,7 +11,7 @@ class TokenService {
     }
 
     static generateToken = async (userInfo, secretSignature, tokenLife) => {
-        const token = JWT.sign(userInfo, secretSignature, { algorithm: 'HS256', expiresIn: tokenLife })
+        const token = await JWT.sign(userInfo, secretSignature, { algorithm: 'HS256', expiresIn: tokenLife })
         if (!token) throw new ConflictRequestError('Generate Token Error!')
         return token
     }
@@ -20,7 +19,7 @@ class TokenService {
     static verifyToken = async (token, secretSignature, typeToken) => {
         const TokenExpiredError = 'TokenExpiredError'
         try {
-            return JWT.verify(token, secretSignature)
+            return await JWT.verify(token, secretSignature)
         } catch (error) {
             if (error.name === TokenExpiredError) {
                 throw new AuthFailureError(`${typeToken ?? 'Token'} Expired!`)

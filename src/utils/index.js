@@ -17,8 +17,8 @@ const hashData = async (data, numberSalt) => {
     return data_hash
 }
 
-const compareData = async ({data, hashData}) => {
-    const isValid = await bcrypt.compare(data,hashData)
+const compareData = async ({ data, hashData }) => {
+    const isValid = await bcrypt.compare(data, hashData)
     return isValid
 }
 
@@ -26,10 +26,17 @@ const addMinutes = (minutes) => {
     return new Date(Date.now() + minutes * 60 * 1000);
 };
 
+const formatStringToArray = (stringData) => {
+    let formattedStringData = stringData.replace(/(\w{24})/g, '"$1"');
+    let arrayData = JSON.parse(formattedStringData);
+    return arrayData
+}
+
 module.exports = {
     selectFilesData,
     asyncHandler,
     hashData,
     compareData,
-    addMinutes
+    addMinutes,
+    formatStringToArray
 }
