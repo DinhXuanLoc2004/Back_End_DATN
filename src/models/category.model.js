@@ -5,7 +5,9 @@ const COLLECTION_NAME_CATEGORY = 'Categories'
 
 const categorySchema = new mongoose.Schema({
     name_category: { type: String, require: true },
-    parent_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY }
+    parent_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
+    image_category: { type: Object, default: {} },
+    depth: {type: Number, default: 0}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_CATEGORY

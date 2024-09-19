@@ -24,10 +24,10 @@ class AccessService {
     }
 
     static signUp = async ({ email, password }) => {
-        const hoderEmail = await usersModel.findOne({ email: email }).lean()
+        const hoderEmail = await userModel.findOne({ email: email }).lean()
         if (hoderEmail) throw new BadRequestError('Email already registered!')
         const passwordHashed = await hashData(password)
-        const newUser = await usersModel.create({
+        const newUser = await userModel.create({
             email: email,
             password: passwordHashed
         })
@@ -39,12 +39,12 @@ class AccessService {
     }
 
     static verifyAccountOtp = async ({ email, otp }) => {
-        const hoderUser = await usersModel.findOne({ email: email }).lean()
+        const hoderUser = await userModel.findOne({ email: email }).lean()
         if (!hoderUser) throw new NotFoundError('Email is not found!')
         const userId = hoderUser._id
         const isVerify = await OtpService.verifyOtp({ userId, otp })
         if (isVerify) {
-            await usersModel.findByIdAndUpdate(
+            await userModel.findByIdAndUpdate(
                 { _id: userId },
                 { status: 'active' },
                 { new: true }

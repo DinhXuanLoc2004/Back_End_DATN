@@ -4,7 +4,8 @@ const DOCUMENT_NAME_BRAND = 'Brand'
 const COLLECTION_NAME_BRAND = 'Brands'
 
 const brandSchema = new mongoose.Schema({
-    name_brand: { type: String, require: true }
+    name_brand: { type: String, require: true },
+    image_brand: {type: Object, default: {}}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_BRAND
