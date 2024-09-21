@@ -8,5 +8,6 @@ router.post('/add_product', upload.array(['images']), uploadImageMiddleware, asy
 router.get('/get_products', asyncHandler(ProductController.getProducts))
 router.post('/get_all_products/', asyncHandler(ProductController.getAllProducts))
 router.get('/get_data_filter', asyncHandler(ProductController.getDataFilter))
+router.get('/get_detail_product/', asyncHandler(ProductController.getProductDetail))
 
 module.exports = router

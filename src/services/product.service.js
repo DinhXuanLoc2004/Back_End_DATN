@@ -7,11 +7,140 @@ const { COLLECTION_NAME_CATEGORY, categoryModel } = require('../models/category.
 const { COLLECTION_NAME_REVIEW } = require('../models/review.model')
 const { COLLECTION_NAME_FAVORITE } = require("../models/favorite.model")
 const { default: mongoose } = require("mongoose")
-const { colorModel } = require("../models/color.model")
-const { sizeModel } = require("../models/size.model")
+const { colorModel, COLLECTION_NAME_COLOR } = require("../models/color.model")
+const { sizeModel, COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
+    static getProductDetail = async ({ product_id, user_id }) => {
+        if (!product_id) throw new NotFoundError('Not found product_id')
+        const product_ObId = new ObjectId(product_id)
+        const product = await productModel.aggregate([
+            { $match: { _id: product_ObId } },
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_SIZE,
+                    localField: 'sizes_id',
+                    foreignField: '_id',
+                    as: 'sizes'
+                }
+            },
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_COLOR,
+                    localField: 'colors_id',
+                    foreignField: '_id',
+                    as: 'colors'
+                }
+            },
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_BRAND,
+                    localField: 'brand_id',
+                    foreignField: '_id',
+                    as: 'brand'
+                }
+            },
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_CATEGORY,
+                    localField: 'category_id',
+                    foreignField: '_id',
+                    as: 'category'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_REVIEW,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'reviews'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_FAVORITE,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'favorites'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_SALE,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'sale'
+                }
+            }, {
+                $addFields: {
+                    isFavorite: {
+                        $cond: {
+                            if: {
+                                $and: [{ $gt: [user_id, null] }, {
+                                    $anyElementTrue: {
+                                        $map: {
+                                            input: "$favorites",
+                                            as: "favorite",
+                                            in: { $eq: ["$$favorite.user_id", { $toObjectId: user_id }] }
+                                        }
+                                    }
+                                }]
+                            },
+                            then: true,
+                            else: false
+                        }
+                    },
+                    name_brand: { $arrayElemAt: ["$brand.name_brand", 0] },
+                    name_category: { $arrayElemAt: ["$category.name_category", 0] },
+                    category_id: { $arrayElemAt: ["$category._id", 0] },
+                    averageRating: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$reviews" }, 0] },
+                            then: { $avg: "$reviews.rating" },
+                            else: 0
+                        }
+                    },
+                    countReview: { $size: "$reviews" },
+                    discount: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$sale" }, 0] },
+                            then: { $arrayElemAt: ["$sale.discount", 0] },
+                            else: 0
+                        }
+                    },
+                    endTimeSale: {
+                        $cond: {
+                            if: { $gt: ['$discount', 0] },
+                            then: { $arrayElemAt: ["$sale.endTime", 0] },
+                            else: ''
+                        }
+                    }
+                }
+            }, {
+                $project: {
+                    name_product: 1,
+                    price: 1,
+                    inventory_quantity: 1,
+                    description: 1,
+                    images_product: 1,
+                    'sizes._id': 1,
+                    'sizes.size': 1,
+                    'colors._id': 1,
+                    'colors.hex_color': 1,
+                    'colors.name_color': 1,
+                    isFavorite: 1,
+                    name_brand: 1,
+                    name_category: 1,
+                    category_id: 1,
+                    averageRating: 1,
+                    countReview: 1,
+                    discount: 1,
+                    endTimeSale: 1,
+                    createdAt: 1
+                }
+            }
+        ])
+        if (!product) throw new ConflictRequestError('Error get detai product')
+        return product[0]
+    }
 
     static getDataFilter = async () => {
         const colors = await colorModel.aggregate([{ $project: { _id: 1, hex_color: 1, name_color: 1 } }])
@@ -127,21 +256,18 @@ class ProductService {
                 $addFields: {
                     isFavorite: {
                         $cond: {
-                            if: { $and: [{ $gt: [user_id, null] }, { $gt: [{ $size: '$favorites' }, 0] }] },
-                            then: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: '$favorites',
-                                                as: 'favorite',
-                                                cond: { $eq: ['$$favorite.user_id', { $toObjectId: user_id }] }
-                                            }
+                            if: {
+                                $and: [{ $gt: [user_id, null] }, {
+                                    $anyElementTrue: {
+                                        $map: {
+                                            input: "$favorites",
+                                            as: "favorite",
+                                            in: { $eq: ["$$favorite.user_id", { $toObjectId: user_id }] }
                                         }
-                                    },
-                                    0
-                                ]
+                                    }
+                                }]
                             },
+                            then: true,
                             else: false
                         }
                     },

@@ -2,6 +2,13 @@ const { CREATED, OK } = require("../core/success.response")
 const ProductService = require("../services/product.service")
 
 class ProductController {
+    static getProductDetail = async (req, res, next) => {
+        const {product_id, user_id} = req.query
+        new OK({
+            message: 'Get detail product success!',
+            metadata: await ProductService.getProductDetail({product_id, user_id})
+        }).send(res)
+    }
     static getDataFilter = async (req, res, next) => {
         new OK({
             message: 'Get data filter success!',
