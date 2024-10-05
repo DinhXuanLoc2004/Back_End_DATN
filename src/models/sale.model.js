@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-const { DOCUMENT_NAME_PRODUCT } = require('./product.model')
 
 const DOCUMENT_NAME_SALE = 'Sale'
 const COLLECTION_NAME_SALE = 'Sales'
@@ -11,14 +10,13 @@ const saleSchema = new mongoose.Schema({
         max: 100,
         require: true
     },
-    endTime: { type: Date, require: true },
-    product_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT, require: true, unique: true }
+    time_start: { type: Date, required: true },
+    time_end: { type: Date, required: true },
+    is_active: {type: Boolean, default: true}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_SALE
 })
-
-saleSchema.index({ endTime: 1 }, { expireAfterSeconds: 0 })
 
 const saleModel = mongoose.model(DOCUMENT_NAME_SALE, saleSchema)
 

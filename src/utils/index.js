@@ -1,5 +1,10 @@
 const _ = require('lodash')
 const bcrypt = require('bcrypt')
+const { Types } = require('mongoose')
+
+const convertToDate = time => new Date(time)
+
+const convertToObjectId = _id => new Types.ObjectId(_id)
 
 const selectFilesData = ({ fileds = [], object = {} }) => {
     return _.pick(object, fileds)
@@ -38,5 +43,7 @@ module.exports = {
     hashData,
     compareData,
     addMinutes,
-    formatStringToArray
+    formatStringToArray,
+    convertToObjectId,
+    convertToDate
 }

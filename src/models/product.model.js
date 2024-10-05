@@ -3,20 +3,19 @@ const { DOCUMENT_NAME_COLOR } = require('./color.model')
 const { DOCUMENT_NAME_SIZE } = require('./size.model')
 const { DOCUMENT_NAME_CATEGORY } = require('./category.model')
 const { DOCUMENT_NAME_BRAND } = require('./brand.model')
+const { DOCUMENT_NAME_SALE } = require('./sale.model')
 
 const DOCUMENT_NAME_PRODUCT = 'Product'
 const COLLECTION_NAME_PRODUCT = 'Products'
 
 const productSchema = new mongoose.Schema({
-    name_product: String,
-    price: Number,
-    inventory_quantity: Number,
-    description: String,
+    name_product: {type: String, required: true},
+    description: {type: String, required: true},
+    is_trending: {type: Boolean, default: false},
     images_product: { type: Array, default: [] },
-    colors_id: [{ type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_COLOR }],
-    sizes_id: [{ type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_SIZE }],
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
-    brand_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_BRAND }
+    brand_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_BRAND },
+    sale_id: {type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_SALE}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_PRODUCT

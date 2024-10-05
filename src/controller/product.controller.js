@@ -31,11 +31,9 @@ class ProductController {
         }).send(res)
     }
     static addProduct = async (req, res, next) => {
-        const { name_product, price, description, inventory_quantity, images,
-            colors_id, sizes_id, category_id, brand_id } = req.body
         new CREATED({
             message: 'Created Product Success!',
-            metadata: await ProductService.addProduct({ name_product, price, description, inventory_quantity, images, colors_id, sizes_id, category_id, brand_id })
+            metadata: await ProductService.addProduct({ body: req.body })
         }).send(res)
     }
 }

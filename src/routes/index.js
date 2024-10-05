@@ -14,5 +14,6 @@ router.use(`${BASE_URL}/size`, require('./size.route'))
 router.use(`${BASE_URL}/sale`, require('./sale.route'))
 router.use(`${BASE_URL}/review`, require('./review.route'))
 router.use(`${BASE_URL}/favorite`, require('./favorite.route'))
+router.use(`${BASE_URL}/cart`, require('./cart.route'))
 
 module.exports = router
