@@ -4,7 +4,7 @@ const express = require('express')
 const { default: helmet } = require('helmet')
 const app = express()
 const morgan = require('morgan')
-const { checkOverLoad } = require('./helpers/check.connect')
+const mongoose = require('mongoose')
 
 // init middlewares
 app.use(morgan("dev"))
@@ -15,9 +15,13 @@ app.use(express.urlencoded({
 }))
 app.use(compression())
 
-// init db
-require('./dbs/init.mongodb')
-// checkOverLoad()
+// config mongoDB Atlas
+mongoose.connect(process.env.URL_MONGODB_ATLAS, {
+    maxPoolSize: 100,
+}).then(_ => {
+    console.log(`Connected MongoDB Atlas Success with CountConnections`)
+})
+    .catch(err => console.log(`Error Connect::`, err))
 
 // init routes
 app.use('/', require('./routes/index'))
