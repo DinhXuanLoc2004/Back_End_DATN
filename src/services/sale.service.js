@@ -6,6 +6,7 @@ const { selectFilesData } = require("../utils")
 class SaleService {
     static addSale = async ({ body }) => {
         const { discount, time_start, time_end, product_ids } = body
+        console.log('product_ids::', product_ids);
         const newSale = await saleModel.create({
             discount,
             time_start,

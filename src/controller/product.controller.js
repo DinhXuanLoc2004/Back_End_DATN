@@ -2,11 +2,18 @@ const { CREATED, OK } = require("../core/success.response")
 const ProductService = require("../services/product.service")
 
 class ProductController {
+    static getColorSizeToProduct = async (req, res, next) => {
+        new OK({
+            message: 'Get data colors and sizes to product success',
+            metadata: await ProductService.getColorSizeToProduct({ query: req.query })
+        }).send(res)
+    }
+
     static getProductDetail = async (req, res, next) => {
-        const {product_id, user_id} = req.query
+        const { product_id, user_id } = req.query
         new OK({
             message: 'Get detail product success!',
-            metadata: await ProductService.getProductDetail({product_id, user_id})
+            metadata: await ProductService.getProductDetail({ product_id, user_id })
         }).send(res)
     }
     static getDataFilter = async (req, res, next) => {

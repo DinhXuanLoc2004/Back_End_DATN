@@ -9,5 +9,6 @@ router.get('/get_products', asyncHandler(ProductController.getProducts))
 router.post('/get_all_products/', asyncHandler(ProductController.getAllProducts))
 router.get('/get_data_filter', asyncHandler(ProductController.getDataFilter))
 router.get('/get_detail_product/', asyncHandler(ProductController.getProductDetail))
+router.get('/get_colors_sizes_to_product', asyncHandler(ProductController.getColorSizeToProduct))
 
 module.exports = router

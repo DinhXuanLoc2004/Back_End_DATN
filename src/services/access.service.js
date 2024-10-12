@@ -15,7 +15,7 @@ class AccessService {
         const accessToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PRIVATE_KEY, '1h')
         const refreshToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PUBLIC_KEY, '30 days')
         return {
-            user: selectFilesData({ fileds: ['email', 'status'], object: userHoder }),
+            user: selectFilesData({ fileds: ['email', 'status', '_id'], object: userHoder }),
             tokens: {
                 accessToken: accessToken,
                 refreshToken: refreshToken

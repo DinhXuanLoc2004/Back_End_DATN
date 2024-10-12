@@ -3,7 +3,8 @@ const { sizeModel } = require("../models/size.model")
 const { selectFilesData } = require("../utils")
 
 class SizeService {
-    static addSize = async ({ size }) => {
+    static addSize = async ({ body }) => {
+        const { size } = body
         const newSize = await sizeModel.create({ size })
         if (!newSize) throw new ConflictRequestError('Error create size!')
         return {
