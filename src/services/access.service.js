@@ -10,6 +10,7 @@ class AccessService {
     static login = async ({ email, password }) => {
         const userHoder = await userModel.findOne({ email: email }).lean()
         if (!userHoder) throw new AuthFailureError('Email is incorrect!')
+        if(userHoder.status === 'inactive') return null
         const comparePassword = await compareData({ data: password, hashData: userHoder.password })
         if (!comparePassword) throw new AuthFailureError('Password is not match!')
         const accessToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PRIVATE_KEY, '1h')
