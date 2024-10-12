@@ -3,14 +3,13 @@ const { DOCUMENT_NAME_PRODUCT } = require('./product.model')
 const { DOCUMENT_NAME_COLOR } = require('./color.model')
 const { DOCUMENT_NAME_USER } = require('./user.model')
 const { DOCUMENT_NAME_SIZE } = require('./size.model')
+const { DOCUMENT_NAME_PRODUCT_VARIANT } = require('./product_variant.model')
 
 const DOCUMENT_NAME_CART = 'Cart'
 const COLLECTION_NAME_CART = 'Carts'
 
 const cartSchame = new mongoose.Schema({
-    product_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT, required: true},
-    size_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_SIZE, required: true},
-    color_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_COLOR, required: true},
+    product_variant_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT_VARIANT},
     quantity: {type: Number, require: true},
     user_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_USER}
 }, {

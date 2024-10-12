@@ -11,30 +11,90 @@ const { colorModel, COLLECTION_NAME_COLOR } = require("../models/color.model")
 const { sizeModel, COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { COLLECTION_NAME_USER } = require("../models/user.model")
+const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
+
+    static getColorSizeToProduct = async ({ query }) => {
+        const { product_id } = query;
+        const product = await productModel.findById(product_id).lean()
+        const thumb = product.images_product[0].url
+        const Ob_product_id = convertToObjectId(product_id)
+        const variants = await product_variantModel.aggregate([{
+            $match: { product_id: Ob_product_id }
+        }, {
+            $group: {
+                _id: null,
+                image_product_color_ids: { $addToSet: '$image_product_color_id' },
+                size_ids: { $addToSet: '$size_id' },
+                quantity_default: { $sum: '$quantity' },
+                price_min: { $min: '$price' },
+                price_max: { $max: '$price' }
+            }
+        }, {
+            $lookup: {
+                from: COLLECTION_NAME_SIZE,
+                localField: 'size_ids',
+                foreignField: '_id',
+                as: 'sizes'
+            }
+        }, {
+            $lookup: {
+                from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                localField: 'image_product_color_ids',
+                foreignField: '_id',
+                as: 'image_colors'
+            }
+        }, {
+            $unwind: '$image_colors'
+        }, {
+            $lookup: {
+                from: COLLECTION_NAME_COLOR,
+                localField: 'image_colors.color_id',
+                foreignField: '_id',
+                as: 'colors_info'
+            }
+        }, {
+            $unwind: '$colors_info'
+        }, {
+            $addFields: {
+                'image_colors.name_color': '$colors_info.name_color',
+                'image_colors.hex_color': '$colors_info.hex_color'
+            }
+        }, {
+            $group: {
+                _id: null,
+                sizes: { $first: '$sizes' },
+                quantity_default: { $first: '$quantity_default' },
+                price_min: { $first: '$price_min' },
+                image_colors: { $push: '$image_colors' },
+                price_max: {$first: '$price_max'}
+            }
+        }, {
+            $project: {
+                'sizes._id': 1,
+                'sizes.size': 1,
+                quantity_default: 1,
+                price_min: 1,
+                'image_colors._id': 1,
+                'image_colors.url': 1,
+                'image_colors.name_color': 1,
+                'image_colors.hex_color': 1,
+                'price_max': 1
+            }
+        }])
+
+        const data_response = { thumb, variant: variants[0] }
+
+        return data_response
+    }
+
     static getProductDetail = async ({ product_id, user_id }) => {
         if (!product_id) throw new NotFoundError('Not found product_id')
         const product_ObId = convertToObjectId(product_id)
         const product = await productModel.aggregate([
             { $match: { _id: product_ObId } },
-            {
-                $lookup: {
-                    from: COLLECTION_NAME_SIZE,
-                    localField: 'sizes_id',
-                    foreignField: '_id',
-                    as: 'sizes'
-                }
-            },
-            {
-                $lookup: {
-                    from: COLLECTION_NAME_COLOR,
-                    localField: 'colors_id',
-                    foreignField: '_id',
-                    as: 'colors'
-                }
-            },
             {
                 $lookup: {
                     from: COLLECTION_NAME_BRAND,
@@ -52,13 +112,6 @@ class ProductService {
                 }
             }, {
                 $lookup: {
-                    from: COLLECTION_NAME_REVIEW,
-                    localField: '_id',
-                    foreignField: 'product_id',
-                    as: 'reviews'
-                }
-            }, {
-                $lookup: {
                     from: COLLECTION_NAME_FAVORITE,
                     localField: '_id',
                     foreignField: 'product_id',
@@ -67,11 +120,27 @@ class ProductService {
             }, {
                 $lookup: {
                     from: COLLECTION_NAME_SALE,
-                    localField: '_id',
-                    foreignField: 'product_id',
+                    localField: 'sale_id',
+                    foreignField: '_id',
                     as: 'sale'
                 }
             }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_VARIANT,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'variants'
+                }
+            },
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_REVIEW,
+                    localField: 'variants._id',
+                    foreignField: 'product_variant_id',
+                    as: 'reviews'
+                }
+            },
+            {
                 $addFields: {
                     isFavorite: {
                         $cond: {
@@ -103,18 +172,33 @@ class ProductService {
                     countReview: { $size: "$reviews" },
                     discount: {
                         $cond: {
-                            if: { $gt: [{ $size: "$sale" }, 0] },
+                            if: {
+                                $and: [
+                                    { $gt: [{ $size: "$sale" }, 0] },
+                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
+                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
+                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
+                                ]
+                            },
                             then: { $arrayElemAt: ["$sale.discount", 0] },
                             else: 0
                         }
                     },
                     endTimeSale: {
                         $cond: {
-                            if: { $gt: ['$discount', 0] },
-                            then: { $arrayElemAt: ["$sale.endTime", 0] },
+                            if: {
+                                $and: [
+                                    { $gt: [{ $size: "$sale" }, 0] },
+                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
+                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
+                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
+                                ]
+                            },
+                            then: { $arrayElemAt: ["$sale.time_end", 0] },
                             else: ''
                         }
-                    }
+                    },
+                    price: { $min: '$variants.price' }
                 }
             }, {
                 $project: {
@@ -123,11 +207,6 @@ class ProductService {
                     inventory_quantity: 1,
                     description: 1,
                     images_product: 1,
-                    'sizes._id': 1,
-                    'sizes.size': 1,
-                    'colors._id': 1,
-                    'colors.hex_color': 1,
-                    'colors.name_color': 1,
                     isFavorite: 1,
                     name_brand: 1,
                     name_category: 1,
@@ -136,14 +215,13 @@ class ProductService {
                     countReview: 1,
                     discount: 1,
                     endTimeSale: 1,
-                    createdAt: 1
+                    createdAt: 1,
                 }
             }
         ])
         if (!product) throw new ConflictRequestError('Error get detai product')
         return product[0]
     }
-
     static getAllProducts = async ({ user_id, products_id, category_id, sort, price, colors_id, sizes_id, rating, brands_id }) => {
         let parent_id
         if (category_id && ObjectId.isValid(category_id)) {
@@ -210,6 +288,13 @@ class ProductService {
                     as: 'variants'
                 }
             }, {
+                $lookup: {
+                    from: COLLECTION_NAME_FAVORITE,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'favorites'
+                }
+            }, {
                 $unwind: '$variants'
             },
             {
@@ -218,13 +303,6 @@ class ProductService {
                     localField: 'variants._id',
                     foreignField: 'product_variant_id',
                     as: 'reviews'
-                }
-            }, {
-                $lookup: {
-                    from: COLLECTION_NAME_FAVORITE,
-                    localField: 'variants._id',
-                    foreignField: 'product_variant_id',
-                    as: 'favorites_variant'
                 }
             }, {
                 $lookup: {
@@ -253,23 +331,21 @@ class ProductService {
                 $group: {
                     _id: '$_id',
                     name_product: { $first: '$name_product' },
-                    description: { $first: '$description' },
                     sale: { $first: '$sale' },
                     brand: { $first: '$brand' },
                     category: { $first: '$category' },
                     images_product: { $first: '$images_product' },
                     averageRatingOrNull: { $avg: '$avgRatingVariant' },
                     countReview: { $sum: '$countReviewsVariant' },
-                    favorites_variant: { $push: '$favorites_variant' },
-                    favorites: { $push: '$favorites_variant' },
+                    favorites: { $first: '$favorites' },
                     price_min: { $min: '$variants.price' },
                     price_max: { $max: '$variants.price' },
                     inventory_quantity: { $sum: '$variants.quantity' },
                     createdAt: { $first: '$createdAt' },
                     is_trending: { $first: '$is_trending' },
                     variants: { $push: '$variants' },
-                    colors: { $push: '$colors' },
-                    sizes: { $push: '$sizes' },
+                    colors: { $addToSet: '$colors' },
+                    sizes: { $addToSet: '$sizes' },
                 }
             }, {
                 $addFields: {
@@ -280,16 +356,8 @@ class ProductService {
                                     $anyElementTrue: {
                                         $map: {
                                             input: "$favorites",
-                                            as: "favorites_variant",
-                                            in: {
-                                                $anyElementTrue: {
-                                                    $map: {
-                                                        input: '$$favorites_variant',
-                                                        as: 'favorite',
-                                                        in: { $eq: ['$$favorite.user_id', { $toObjectId: user_id }] }
-                                                    }
-                                                }
-                                            }
+                                            as: "favorite",
+                                            in: { $eq: ['$$favorite.user_id', { $toObjectId: user_id }] }
                                         }
                                     }
                                 }]
@@ -308,20 +376,15 @@ class ProductService {
                     thumb: { $arrayElemAt: ['$images_product.url', 0] },
                     discount: {
                         $cond: {
-                            if: { $gt: [{ $size: '$sale' }, 0] },
-                            then: {
-                                $cond: {
-                                    if: {
-                                        $and: [
-                                            { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
-                                            { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
-                                            { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
-                                        ]
-                                    },
-                                    then: { $arrayElemAt: ['$sale.discount', 0] },
-                                    else: 0
-                                }
+                            if: {
+                                $and: [
+                                    { $gt: [{ $size: "$sale" }, 0] },
+                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
+                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
+                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
+                                ]
                             },
+                            then: { $arrayElemAt: ["$sale.discount", 0] },
                             else: 0
                         }
                     },
@@ -331,7 +394,6 @@ class ProductService {
             }, {
                 $project: {
                     name_product: 1,
-                    description: 1,
                     discount: 1,
                     name_brand: 1,
                     name_category: 1,
@@ -383,6 +445,11 @@ class ProductService {
         }
         pipeline.push({
             $match: matchFilter
+        }, {
+            $project: {
+                colors: 0,
+                sizes: 0
+            }
         })
         if (sort) {
             const [key, value] = sort.split(':').map(str => str.trim())
@@ -407,7 +474,7 @@ class ProductService {
             $addFields: { thumb_brand: '$image_brand.url' }
         },
         { $project: { _id: 1, name_brand: 1, thumb_brand: 1 } }])
-        const price = await productModel.aggregate([
+        const price = await product_variantModel.aggregate([
             {
                 $group: {
                     _id: null,
@@ -468,10 +535,10 @@ class ProductService {
                 price: element.price,
                 product_id: newProduct._id,
                 size_id: element.size_id,
-                color_id: element.color_id
+                image_product_color_id: element.image_product_color_id
             })
             if (!new_product_variant) throw new ConflictRequestError('Error create product_variant!')
-            new_product_variants.push(selectFilesData({ fileds: ['quantity', 'price', 'product_id', 'size_id', 'color_id'], object: new_product_variant }));
+            new_product_variants.push(selectFilesData({ fileds: ['quantity', 'price', 'product_id', 'size_id', 'image_product_color_id'], object: new_product_variant }));
         }
         newProductResponse.product_variants = new_product_variants
         return newProductResponse

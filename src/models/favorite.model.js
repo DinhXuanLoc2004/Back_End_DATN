@@ -9,7 +9,7 @@ const DOCUMENT_NAME_FAVORITE = 'Favorite'
 const COLLECTION_NAME_FAVORITE = 'Favorites'
 
 const favoriteSchema = new mongoose.Schema({
-    product_variant_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT_VARIANT},
+    product_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT},
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_USER }
 }, {
     timestamps: true,
