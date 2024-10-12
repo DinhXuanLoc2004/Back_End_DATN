@@ -1,8 +1,8 @@
 const app = require("./src/app");
-const {app: {port}} = require('./src/configs/config.mongodb')
+const PORT = 5000
 
-const server = app.listen( port, () => {
-    console.log(`Back End T_Shop start with port:: ${port}`)
+const server = app.listen( PORT, () => {
+    console.log(`Back End T_Shop start with port:: ${PORT}`)
 })
 
 process.on('SIGINT', () => {
