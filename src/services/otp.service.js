@@ -36,7 +36,7 @@ class OtpService {
         const newOTP = await otpModel.create({
             userId: userId,
             otp: otpHashed,
-            endTime: addMinutes(5),
+            endTime: addMinutes(1),
             createAt: Date.now()
         })
         if (newOTP) {
