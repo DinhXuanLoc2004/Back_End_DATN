@@ -12,6 +12,7 @@ const { sizeModel, COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { COLLECTION_NAME_USER } = require("../models/user.model")
 const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
+const { size } = require("lodash")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
@@ -69,7 +70,7 @@ class ProductService {
                 quantity_default: { $first: '$quantity_default' },
                 price_min: { $first: '$price_min' },
                 image_colors: { $push: '$image_colors' },
-                price_max: {$first: '$price_max'}
+                price_max: { $first: '$price_max' }
             }
         }, {
             $project: {
@@ -138,6 +139,27 @@ class ProductService {
                     localField: 'variants._id',
                     foreignField: 'product_variant_id',
                     as: 'reviews'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_SIZE,
+                    localField: 'variants.size_id',
+                    foreignField: '_id',
+                    as: 'sizes'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                    localField: 'variants.image_product_color_id',
+                    foreignField: '_id',
+                    as: 'image_product_colors'
+                }
+            },{
+                $lookup: {
+                    from: COLLECTION_NAME_COLOR,
+                    localField: 'image_product_colors.color_id',
+                    foreignField: '_id',
+                    as: 'colors'
                 }
             },
             {
@@ -216,12 +238,18 @@ class ProductService {
                     discount: 1,
                     endTimeSale: 1,
                     createdAt: 1,
+                    'sizes._id': 1,
+                    'sizes.size': 1,
+                    'colors._id': 1,
+                    'colors.name_color': 1,
+                    'colors.hex_color': 1
                 }
             }
         ])
         if (!product) throw new ConflictRequestError('Error get detai product')
         return product[0]
     }
+
     static getAllProducts = async ({ user_id, products_id, category_id, sort, price, colors_id, sizes_id, rating, brands_id }) => {
         let parent_id
         if (category_id && ObjectId.isValid(category_id)) {
@@ -543,6 +571,7 @@ class ProductService {
         newProductResponse.product_variants = new_product_variants
         return newProductResponse
     }
+    
 }
 
 module.exports = ProductService
