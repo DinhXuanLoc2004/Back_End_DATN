@@ -12,7 +12,9 @@ class AccessService {
         if (!userHoder) throw new AuthFailureError('Email is incorrect!')
         const comparePassword = await compareData({ data: password, hashData: userHoder.password })
         if (!comparePassword) throw new AuthFailureError('Password is not match!')
-        if(userHoder.status === 'inactive') return null
+        if(userHoder.status === 'inactive') {
+            await OtpService.createAndSendOtp({userId: userHoder._id})
+        }
         const accessToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PRIVATE_KEY, '1h')
         const refreshToken = await TokenService.generateToken({ _id: userHoder._id }, process.env.PUBLIC_KEY, '30 days')
         return {
@@ -26,7 +28,10 @@ class AccessService {
 
     static signUp = async ({ email, password }) => {
         const hoderEmail = await userModel.findOne({ email: email }).lean()
-        if (hoderEmail.status === 'inactive') return null 
+        if (hoderEmail && hoderEmail.status === 'inactive'){
+            await OtpService.createAndSendOtp({userId: hoderEmail._id})
+            return null
+        }
         const passwordHashed = await hashData(password)
         const newUser = await userModel.create({
             email: email,
