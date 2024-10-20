@@ -7,16 +7,16 @@ const { COLLECTION_NAME_SIZE } = require("../models/size.model");
 const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model");
 const { COLLECTION_NAME_PRODUCT } = require("../models/product.model");
 const { COLLECTION_NAME_COLOR } = require("../models/color.model");
+const { COLLECTION_NAME_FAVORITE } = require("../models/favorite.model");
 
 class CartService {
     static deleteCart = async ({ query }) => {
         const { cart_id } = query
-        console.log(cart_id);
         const cart = await cartModel.findById(cart_id).lean()
         if (!cart) throw new NotFoundError('Item cart not found!')
         const cartDelete = await cartModel.findByIdAndDelete(cart_id)
         if (!cartDelete) throw new ConflictRequestError('Error delete cart')
-        return selectFilesData({ fileds: ['_id'], object: cartDelete})
+        return selectFilesData({ fileds: ['_id'], object: cartDelete })
     }
 
     static changeQuantityCart = async ({ body }) => {
@@ -80,8 +80,30 @@ class CartService {
                     as: 'color'
                 }
             }, {
+                $lookup: {
+                    from: COLLECTION_NAME_FAVORITE,
+                    localField: 'product._id',
+                    foreignField: 'product_id',
+                    as: 'favorites'
+                }
+            }, {
                 $addFields: {
-                    color: { $arrayElemAt: ['$color', 0] }
+                    color: { $arrayElemAt: ['$color', 0] },
+                    isFavorite: {
+                        $cond: {
+                            if: {
+                                $anyElementTrue: {
+                                    $map: {
+                                        input: "$favorites",
+                                        as: "favorite",
+                                        in: { $eq: ['$$favorite.user_id', { $toObjectId: user_id }] }
+                                    }
+                                }
+                            },
+                            then: true,
+                            else: false
+                        }
+                    }
                 }
             }, {
                 $project: {
@@ -93,7 +115,9 @@ class CartService {
                     name_color: '$color.name_color',
                     hex_color: '$color.hex_color',
                     size: '$size.size',
-                    create_at: '$product.createdAt'
+                    create_at: '$product.createdAt',
+                    isFavorite: 1,
+                    product_id: '$product._id'
                 }
             }
         ])
