@@ -10,6 +10,12 @@ const selectFilesData = ({ fileds = [], object = {} }) => {
     return _.pick(object, fileds)
 }
 
+const unselectFilesData = ({ fields = [], object = {} }) => {
+    return Object.fromEntries(
+        Object.entries(object).filter(([key]) => !fields.includes(key))
+    );
+};
+
 const asyncHandler = fn => {
     return (req, res, next) => {
         fn(req, res, next).catch(next)
@@ -45,5 +51,6 @@ module.exports = {
     addMinutes,
     formatStringToArray,
     convertToObjectId,
-    convertToDate
+    convertToDate,
+    unselectFilesData
 }
