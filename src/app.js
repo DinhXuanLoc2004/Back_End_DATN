@@ -5,6 +5,7 @@ const { default: helmet } = require('helmet')
 const app = express()
 const morgan = require('morgan')
 const mongoose = require('mongoose')
+const cors = require('cors'); // Thư viện để xử lý CORS
 
 // init middlewares
 app.use(morgan("dev"))
@@ -14,6 +15,9 @@ app.use(express.urlencoded({
     extended: true
 }))
 app.use(compression())
+
+// CORS
+app.use(cors()); // Kích hoạt CORS cho tất cả các yêu cầu
 
 // config mongoDB Atlas
 mongoose.connect(process.env.URL_MONGODB_ATLAS, {
