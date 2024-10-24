@@ -1,6 +1,8 @@
 const _ = require('lodash')
 const bcrypt = require('bcrypt')
 const { Types } = require('mongoose')
+const cloudianry = require('../configs/config.cloudinary')
+const { ConflictRequestError } = require('../core/error.reponse')
 
 const convertToDate = time => new Date(time)
 
@@ -15,6 +17,22 @@ const unselectFilesData = ({ fields = [], object = {} }) => {
         Object.entries(object).filter(([key]) => !fields.includes(key))
     );
 };
+
+const deleteImage = (public_id) => {
+    cloudianry.uploader.destroy(public_id, (error, result) => {
+        if (error) {
+            console.log('Error delete image utily:: ', error);
+        } else {
+            console.log('Result delete image utily:: ', result);
+        }
+    })
+}
+
+const validateTime = (time_start, time_end) => {
+    const date = new Date()
+    if (date > convertToDate(time_start) || convertToDate(time_end) < date) throw new ConflictRequestError('Invalid time!')
+    if (convertToDate(time_start) >= convertToDate(time_end)) throw new ConflictRequestError('Start time must be before end time!')
+}
 
 const asyncHandler = fn => {
     return (req, res, next) => {
@@ -52,5 +70,7 @@ module.exports = {
     formatStringToArray,
     convertToObjectId,
     convertToDate,
-    unselectFilesData
+    unselectFilesData,
+    deleteImage,
+    validateTime
 }

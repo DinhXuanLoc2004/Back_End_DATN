@@ -547,8 +547,7 @@ class ProductService {
             description,
             images_product: images,
             category_id,
-            brand_id,
-            sale_id: null
+            brand_id
         })
         if (!newProduct) throw new ConflictRequestError('Error add new product!')
         let newProductResponse = selectFilesData({

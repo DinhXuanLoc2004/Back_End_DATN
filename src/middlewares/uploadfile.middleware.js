@@ -6,6 +6,19 @@ const { ConflictRequestError } = require('../core/error.reponse')
 
 const pattern = /^.*\.(jpg|jpeg|png|gif|bmp|tiff|WEBP)$/i
 
+const deleteImageMiddleware = asyncHandler(async (req, res, next) => {
+    const public_id = req.body.image.public_id
+    if (!public_id) next()
+    cloudinary.uploader.destroy(public_id, (error, result) => {
+        if (error) {
+            console.log('Error delete image cloudinary:: ', error);
+        } else {
+            console.log('Result delete image cloudianry:: ', result);
+        }
+    })
+    return req
+})
+
 const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
     const image = req.file
     if (!image) next()
@@ -48,5 +61,6 @@ const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
 module.exports = {
     upload,
     uploadImageMiddleware,
-    uploadSingleImageMiddleware
+    uploadSingleImageMiddleware,
+    deleteImageMiddleware
 }

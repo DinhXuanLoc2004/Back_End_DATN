@@ -5,6 +5,7 @@ const { default: helmet } = require('helmet')
 const app = express()
 const morgan = require('morgan')
 const mongoose = require('mongoose')
+const cors = require('cors')
 
 // init middlewares
 app.use(morgan("dev"))
@@ -14,6 +15,7 @@ app.use(express.urlencoded({
     extended: true
 }))
 app.use(compression())
+app.use(cors)
 
 // config mongoDB Atlas
 mongoose.connect(process.env.URL_MONGODB_ATLAS, {

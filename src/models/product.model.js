@@ -15,7 +15,6 @@ const productSchema = new mongoose.Schema({
     images_product: { type: Array, default: [] },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
     brand_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_BRAND },
-    sale_id: {type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_SALE}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_PRODUCT

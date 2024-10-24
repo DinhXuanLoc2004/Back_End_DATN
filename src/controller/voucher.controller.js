@@ -2,6 +2,13 @@ const { CREATED, OK } = require('../core/success.response')
 const VoucherService = require('../services/voucher.service')
 
 class VoucherController {
+    static getDetailVoucher = async (req, res, next) => {
+        new OK({
+            message: 'Get detail voucher success!',
+            metadata: await VoucherService.getDetailVoucher({ query: req.query })
+        }).send(res)
+    }
+
     static getAllVouchers = async (req, res, next) => {
         new OK({
             message: 'Get all voucher success',
@@ -9,17 +16,10 @@ class VoucherController {
         }).send(res)
     }
 
-    static getProductsWithVoucher = async (req, res, next) => {
-        new OK({
-            message: 'Get product with voucher success!',
-            metadata: await VoucherService.getProductsWithVoucher(req.body)
-        }).send(res)
-    }
-
     static createVoucher = async (req, res, next) => {
         new CREATED({
             message: 'Create voucher success!',
-            metadata: await VoucherService.createVoucher(req.body)
+            metadata: await VoucherService.createVoucher({ body: req.body })
         }).send(res)
     }
 }

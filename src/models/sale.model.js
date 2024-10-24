@@ -12,7 +12,9 @@ const saleSchema = new mongoose.Schema({
     },
     time_start: { type: Date, required: true },
     time_end: { type: Date, required: true },
-    is_active: {type: Boolean, default: true}
+    is_active: { type: Boolean, default: true },
+    image_sale: { type: Object, default: {} },
+    name_sale: {type: String, require: true}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_SALE
