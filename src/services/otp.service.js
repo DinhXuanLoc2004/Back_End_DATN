@@ -52,6 +52,7 @@ class OtpService {
         const verifyOtp = await compareData({ data: otp, hashData: userIdHoder.otp })
         if (!verifyOtp) throw new AuthFailureError('OTP is incorrect!')
         if (userIdHoder && verifyOtp) {
+            await otpModel.findOneAndDelete({ userId: userIdHoder._id });
             return true
         }
         return false
