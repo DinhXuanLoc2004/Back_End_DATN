@@ -8,6 +8,7 @@ class AccessController {
       metadata: await AccessService.verifyAccountOtp({ body: req.body }),
     }).send(res);
   };
+
   static signUp = async (req, res, next) => {
     const { email, password } = req.body;
     new CREATED({
@@ -15,12 +16,14 @@ class AccessController {
       metadata: await AccessService.signUp({ email, password }),
     }).send(res);
   };
+
   static sendOtp = async (req, res, next) => {
     new CREATED({
       message: "Create and otp success!",
       metadata: await AccessService.sendOtp({ body: req.body }),
     }).send(res);
   };
+  
   static login = async (req, res, next) => {
     const { email, password } = req.body;
     new OK({
