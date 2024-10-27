@@ -12,8 +12,6 @@ const shipping_addressSchema = new mongoose.Schema({
     ward_commune: {type: String, require: true},
     specific_address: {type: String, require: true},
     is_default: {type: Boolean, require: true, default: false},
-    meridian: {type: String, require: true},
-    latitude: {type: String, require: true},
     user_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_USER}
 }, {
     timestamps: true,

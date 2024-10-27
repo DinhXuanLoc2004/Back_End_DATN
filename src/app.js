@@ -15,7 +15,7 @@ app.use(express.urlencoded({
     extended: true
 }))
 app.use(compression())
-app.use(cors)
+app.use(cors())
 
 // config mongoDB Atlas
 mongoose.connect(process.env.URL_MONGODB_ATLAS, {

@@ -16,8 +16,7 @@ class ShippingAddressService {
     static updateShippingAddress = async ({ body, query }) => {
         const { _id } = query
         const { full_name, phone, province_city, district,
-            ward_commune, specific_address, is_default,
-            meridian, latitude } = body
+            ward_commune, specific_address, is_default } = body
         const shipping_address = await shipping_addressModel.findById(_id).lean()
         if (!shipping_address) throw new NotFoundError('Not found shipping address!')
         if (is_default) {
@@ -33,8 +32,7 @@ class ShippingAddressService {
         const shipping_address_updated = await shipping_addressModel.findByIdAndUpdate(_id, {
             $set: {
                 full_name, phone, province_city,
-                district, ward_commune, specific_address,
-                is_default, meridian, latitude
+                district, ward_commune, specific_address, is_default
             }
         }, {
             new: true
@@ -102,8 +100,7 @@ class ShippingAddressService {
 
     static addShippingAddress = async ({ body }) => {
         const { full_name, phone, province_city, district,
-            ward_commune, specific_address, is_default,
-            meridian, latitude, user_id } = body
+            ward_commune, specific_address, is_default, user_id } = body
         const user = await userModel.findById(user_id).lean()
         if (!user) throw new NotFoundError('Not found user')
         if (is_default) {
@@ -117,8 +114,7 @@ class ShippingAddressService {
         }
         const newshippingAddress = await shipping_addressModel.create({
             full_name, phone, province_city, district,
-            ward_commune, specific_address, is_default,
-            meridian, latitude, user_id
+            ward_commune, specific_address, is_default, user_id
         })
         if (!newshippingAddress) ConflictRequestError('Conficted create shipping address')
         return newshippingAddress

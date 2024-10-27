@@ -13,6 +13,7 @@ const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../mo
 const { COLLECTION_NAME_USER } = require("../models/user.model")
 const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
 const { size } = require("lodash")
+const { COLLECTION_NAME_PRODUCT_SALE } = require("../models/product_sale.model")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
@@ -154,7 +155,7 @@ class ProductService {
                     foreignField: '_id',
                     as: 'image_product_colors'
                 }
-            },{
+            }, {
                 $lookup: {
                     from: COLLECTION_NAME_COLOR,
                     localField: 'image_product_colors.color_id',
@@ -251,6 +252,7 @@ class ProductService {
     }
 
     static getAllProducts = async ({ user_id, products_id, category_id, sort, price, colors_id, sizes_id, rating, brands_id }) => {
+        const date = new Date()
         let parent_id
         if (category_id && ObjectId.isValid(category_id)) {
             const category = await categoryModel.findById(category_id).lean()
@@ -286,13 +288,20 @@ class ProductService {
         const pipeline = [
             {
                 $match: matchCondition
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_SALE,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'product_sale'
+                }
             },
             {
                 $lookup: {
                     from: COLLECTION_NAME_SALE,
-                    localField: 'sale_id',
+                    localField: 'product_sale.sale_id',
                     foreignField: '_id',
-                    as: 'sale'
+                    as: 'sales'
                 }
             }, {
                 $lookup: {
@@ -359,7 +368,7 @@ class ProductService {
                 $group: {
                     _id: '$_id',
                     name_product: { $first: '$name_product' },
-                    sale: { $first: '$sale' },
+                    sales: { $first: '$sales' },
                     brand: { $first: '$brand' },
                     category: { $first: '$category' },
                     images_product: { $first: '$images_product' },
@@ -402,18 +411,17 @@ class ProductService {
                         }
                     },
                     thumb: { $arrayElemAt: ['$images_product.url', 0] },
-                    discount: {
-                        $cond: {
-                            if: {
+                    sales_active: {
+                        $filter: {
+                            input: '$sales',
+                            as: 'sale',
+                            cond: {
                                 $and: [
-                                    { $gt: [{ $size: "$sale" }, 0] },
-                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
-                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
-                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
+                                    { $eq: ['$$sale.is_active', true] },
+                                    { $lte: ['$$sale.time_start', date] },
+                                    { $gte: ['$$sale.time_end', date] }
                                 ]
-                            },
-                            then: { $arrayElemAt: ["$sale.discount", 0] },
-                            else: 0
+                            }
                         }
                     },
                     name_brand: { $arrayElemAt: ['$brand.name_brand', 0] },
@@ -422,7 +430,7 @@ class ProductService {
             }, {
                 $project: {
                     name_product: 1,
-                    discount: 1,
+                    discount: {$sum: '$sales_active.discount'},
                     name_brand: 1,
                     name_category: 1,
                     reviews: 1,
@@ -440,7 +448,7 @@ class ProductService {
                     'colors.hex_color': 1,
                     'colors.name_color': 1,
                     'sizes._id': 1,
-                    'sizes.size': 1,
+                    'sizes.size': 1
                 }
             }
         ]
@@ -570,7 +578,7 @@ class ProductService {
         newProductResponse.product_variants = new_product_variants
         return newProductResponse
     }
-    
+
 }
 
 module.exports = ProductService

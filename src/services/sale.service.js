@@ -114,7 +114,6 @@ class SaleService {
         const sales = await saleModel.aggregate([{
             $match: {
                 is_active: true,
-                time_start: { $lt: date },
                 time_end: { $gt: date }
             }
         }, {
