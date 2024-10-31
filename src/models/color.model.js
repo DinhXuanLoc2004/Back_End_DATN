@@ -5,7 +5,8 @@ const COLLECTION_NAME_COLOR = 'Colors'
 
 const colorSchema = new mongoose.Schema({
     hex_color: { type: String, reuqire: true },
-    name_color: { type: String, require: true }
+    name_color: { type: String, require: true },
+    is_delete: { type: Boolean, default: false } 
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_COLOR
