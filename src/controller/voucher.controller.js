@@ -12,7 +12,7 @@ class VoucherController {
     static getAllVouchers = async (req, res, next) => {
         new OK({
             message: 'Get all voucher success',
-            metadata: await VoucherService.getAllVouchers()
+            metadata: await VoucherService.getAllVouchers({query: req.query})
         }).send(res)
     }
 

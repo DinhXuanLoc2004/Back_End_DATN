@@ -10,5 +10,7 @@ router.put('/change_is_active_sale', asyncHandler(SaleController.changeIsActiveS
 router.delete('/delete_sale', asyncHandler(SaleController.deteleSale))
 router.put('/update_sale', upload.single('image'), uploadSingleImageMiddleware, asyncHandler(SaleController.updateSale))
 router.get('/get_detail_sale', asyncHandler(SaleController.getDetailSale))
+router.get('/get_categories_sale', asyncHandler(SaleController.getCategoriesSale))
+router.get('/get_products_sale', asyncHandler(SaleController.getProductsSale))
 
 module.exports = router

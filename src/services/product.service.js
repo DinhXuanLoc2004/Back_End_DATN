@@ -94,6 +94,7 @@ class ProductService {
 
     static getProductDetail = async ({ product_id, user_id }) => {
         if (!product_id) throw new NotFoundError('Not found product_id')
+        const date = new Date()
         const product_ObId = convertToObjectId(product_id)
         const product = await productModel.aggregate([
             { $match: { _id: product_ObId } },
@@ -121,10 +122,17 @@ class ProductService {
                 }
             }, {
                 $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_SALE,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'product_sale'
+                }
+            }, {
+                $lookup: {
                     from: COLLECTION_NAME_SALE,
-                    localField: 'sale_id',
+                    localField: 'product_sale.sale_id',
                     foreignField: '_id',
-                    as: 'sale'
+                    as: 'sales'
                 }
             }, {
                 $lookup: {
@@ -193,35 +201,20 @@ class ProductService {
                         }
                     },
                     countReview: { $size: "$reviews" },
-                    discount: {
-                        $cond: {
-                            if: {
+                    price: { $min: '$variants.price' },
+                    sales_active: {
+                        $filter: {
+                            input: '$sales',
+                            as: 'sale',
+                            cond: {
                                 $and: [
-                                    { $gt: [{ $size: "$sale" }, 0] },
-                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
-                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
-                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
+                                    { $eq: ['$$sale.is_active', true] },
+                                    { $lte: ['$$sale.time_start', date] },
+                                    { $gte: ['$$sale.time_end', date] }
                                 ]
-                            },
-                            then: { $arrayElemAt: ["$sale.discount", 0] },
-                            else: 0
+                            }
                         }
-                    },
-                    endTimeSale: {
-                        $cond: {
-                            if: {
-                                $and: [
-                                    { $gt: [{ $size: "$sale" }, 0] },
-                                    { $lt: [{ $arrayElemAt: ['$sale.time_start', 0] }, new Date()] },
-                                    { $lt: [new Date(), { $arrayElemAt: ['$sale.time_end', 0] }] },
-                                    { $eq: [{ $arrayElemAt: ['$sale.is_active', 0] }, true] }
-                                ]
-                            },
-                            then: { $arrayElemAt: ["$sale.time_end", 0] },
-                            else: ''
-                        }
-                    },
-                    price: { $min: '$variants.price' }
+                    }
                 }
             }, {
                 $project: {
@@ -236,14 +229,18 @@ class ProductService {
                     category_id: 1,
                     averageRating: 1,
                     countReview: 1,
-                    discount: 1,
-                    endTimeSale: 1,
+                    discount: { $sum: '$sales_active.discount' },
                     createdAt: 1,
                     'sizes._id': 1,
                     'sizes.size': 1,
                     'colors._id': 1,
                     'colors.name_color': 1,
-                    'colors.hex_color': 1
+                    'colors.hex_color': 1,
+                    'sales_active.name_sale': 1,
+                    'sales_active.discount': 1,
+                    'sales_active.time_end': 1,
+                    'sales_active.image_sale': {$arrayElemAt: ['$sales_active.image_sale.url', 0]},
+                    'sales_active._id': 1
                 }
             }
         ])
@@ -430,7 +427,7 @@ class ProductService {
             }, {
                 $project: {
                     name_product: 1,
-                    discount: {$sum: '$sales_active.discount'},
+                    discount: { $sum: '$sales_active.discount' },
                     name_brand: 1,
                     name_category: 1,
                     reviews: 1,

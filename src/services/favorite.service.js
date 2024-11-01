@@ -38,16 +38,23 @@ class FavoriteService {
                 $addFields: {
                     category: { $arrayElemAt: ['$category', 0] }
                 }
+            },{
+                $unwind: '$category'
+            }, {
+                $group: {
+                    _id: null,
+                    category: { $addToSet: '$category' }
+                }
             }, {
                 $project: {
                     _id: 0,
-                    category_id: '$category._id',
-                    name_category: '$category.name_category'
+                    'category._id': 1,
+                    'category.name_category': 1
                 }
             }
         ])
 
-        return categoryIds
+        return categoryIds.length > 0 ? categoryIds[0].category : []
     }
 
     static getFavorites = async ({ query }) => {

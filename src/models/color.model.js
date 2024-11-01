@@ -4,8 +4,9 @@ const DOCUMENT_NAME_COLOR = 'Color'
 const COLLECTION_NAME_COLOR = 'Colors'
 
 const colorSchema = new mongoose.Schema({
-    hex_color: { type: String, reuqire: true },
-    name_color: { type: String, require: true }
+    hex_color: { type: String, reuqire: true, unique: true },
+    name_color: { type: String, require: true },
+    is_deleted: { type: Boolean, default: false }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_COLOR

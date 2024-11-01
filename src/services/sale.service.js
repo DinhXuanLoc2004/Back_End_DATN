@@ -1,11 +1,227 @@
 const { ConflictRequestError, NotFoundError } = require("../core/error.reponse")
-const { productModel } = require("../models/product.model")
+const { productModel, COLLECTION_NAME_PRODUCT } = require("../models/product.model")
 const { COLLECTION_NAME_PRODUCT_SALE, product_saleModel } = require("../models/product_sale.model")
 const { saleModel, COLLECTION_NAME_SALE } = require("../models/sale.model")
 const { selectFilesData, convertToObjectId, convertToDate, deleteImage, validateTime, formatStringToArray, unselectFilesData } = require("../utils")
 const cloudinary = require('../configs/config.cloudinary')
+const { COLLECTION_NAME_CATEGORY } = require("../models/category.model")
+const { COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
+const { COLLECTION_NAME_BRAND } = require("../models/brand.model")
+const { COLLECTION_NAME_FAVORITE } = require("../models/favorite.model")
 
 class SaleService {
+    static getProductsSale = async ({ query }) => {
+        const { sale_id, category_id, user_id } = query
+        const sale_Obid = convertToObjectId(sale_id)
+        const date = new Date()
+        let pipeline = [
+            {
+                $match: {
+                    sale_id: sale_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT,
+                    localField: 'product_id',
+                    foreignField: '_id',
+                    as: 'product',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_SALE,
+                                localField: '_id',
+                                foreignField: 'product_id',
+                                as: 'product_sale'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_SALE,
+                                localField: 'product_sale.sale_id',
+                                foreignField: '_id',
+                                as: 'sales'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_BRAND,
+                                localField: 'brand_id',
+                                foreignField: '_id',
+                                as: 'brand'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_CATEGORY,
+                                localField: 'category_id',
+                                foreignField: '_id',
+                                as: 'category'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_VARIANT,
+                                localField: '_id',
+                                foreignField: 'product_id',
+                                as: 'product_variants'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_FAVORITE,
+                                localField: '_id',
+                                foreignField: 'product_id',
+                                as: 'favorites'
+                            }
+                        }, {
+                            $addFields: {
+                                category: { $arrayElemAt: ['$category', 0] },
+                                brand: { $arrayElemAt: ['$brand', 0] },
+                                price_min: { $min: '$product_variants.price' },
+                                inventory: { $sum: '$product_variants.quantity' },
+                                thumb: { $arrayElemAt: ['$images_product.url', 0] },
+                                sales_active: {
+                                    $filter: {
+                                        input: '$sales',
+                                        as: 'sale',
+                                        cond: {
+                                            $and: [
+                                                { $eq: ['$$sale.is_active', true] },
+                                                { $lte: ['$$sale.time_start', date] },
+                                                { $gte: ['$$sale.time_end', date] }
+                                            ]
+                                        }
+                                    }
+                                },
+                                isFavorite: {
+                                    $cond: {
+                                        if: {
+                                            $and: [{ $gt: [user_id, null] }, {
+                                                $anyElementTrue: {
+                                                    $map: {
+                                                        input: "$favorites",
+                                                        as: "favorite",
+                                                        in: { $eq: ['$$favorite.user_id', { $toObjectId: user_id }] }
+                                                    }
+                                                }
+                                            }]
+                                        },
+                                        then: true,
+                                        else: false
+                                    }
+                                },
+                                averageRating: 0,
+                                countReview: 0,
+                            }
+                        }, {
+                            $project: {
+                                _id: 1,
+                                name_product: 1,
+                                price_min: 1,
+                                inventory: 1,
+                                name_brand: '$brand.name_brand',
+                                name_category: '$category.name_category',
+                                category_id: '$category._id',
+                                thumb: 1,
+                                discount: { $sum: '$sales_active.discount' },
+                                isFavorite: 1,
+                                createdAt: 1,
+                                averageRating: 1,
+                                countReview: 1,
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    product: { $arrayElemAt: ['$product', 0] }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    _id: '$product._id',
+                    name_product: '$product.name_product',
+                    price_min: '$product.price_min',
+                    inventory: '$product.inventory',
+                    name_brand: '$product.name_brand',
+                    name_category: '$product.name_category',
+                    category_id: '$product.category_id',
+                    thumb: '$product.thumb',
+                    discount: '$product.discount',
+                    isFavorite: '$product.isFavorite',
+                    createdAt: '$product.createdAt',
+                    averageRating: '$product.averageRating',
+                    countReview: '$product.countReview',
+                }
+            }
+        ]
+        if (category_id) {
+            const category_Obid = convertToObjectId(category_id)
+            pipeline.push({
+                $match: {
+                    category_id: category_Obid
+                }
+            })
+        }
+        const products = await product_saleModel.aggregate(pipeline)
+        return products
+    }
+
+    static getCategoriesSale = async ({ query }) => {
+        const { sale_id } = query
+        const sale_Obid = convertToObjectId(sale_id)
+        const categories = await product_saleModel.aggregate([
+            {
+                $match: {
+                    sale_id: sale_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT,
+                    localField: 'product_id',
+                    foreignField: '_id',
+                    as: 'categories',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_CATEGORY,
+                                localField: 'category_id',
+                                foreignField: '_id',
+                                as: 'category'
+                            }
+                        }, {
+                            $addFields: {
+                                category: { $arrayElemAt: ['$category', 0] }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                category_id: '$category._id',
+                                name_category: '$category.name_category'
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    categories: { $arrayElemAt: ['$categories', 0] }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    categories: 1
+                }
+            }, {
+                $group: {
+                    _id: null,
+                    categories: { $addToSet: '$categories' }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    categories: 1
+                }
+            }
+        ])
+
+        return categories[0].categories
+    }
+
     static getDetailSale = async ({ query }) => {
         const { _id } = query
         const sale = await saleModel.findById(_id).lean()
@@ -114,6 +330,7 @@ class SaleService {
         const sales = await saleModel.aggregate([{
             $match: {
                 is_active: true,
+                time_start: { $lt: date },
                 time_end: { $gt: date }
             }
         }, {

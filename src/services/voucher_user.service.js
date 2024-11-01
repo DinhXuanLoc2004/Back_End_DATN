@@ -5,13 +5,14 @@ const { unselectFilesData, convertToObjectId } = require("../utils")
 
 class VoucherUserService {
     static getValidVoucher = async ({ query }) => {
-        const { user_id } = query
+        const { user_id, is_used, min_order_value } = query
         const user_Obid = convertToObjectId(user_id)
-        const vouchers = await voucher_userModel.aggregate([
+        const is_used_boolean = is_used === 'true'
+        let pipeline = [
             {
                 $match: {
                     user_id: user_Obid,
-                    is_used: false
+                    is_used: is_used_boolean
                 }
             }, {
                 $lookup: {
@@ -21,9 +22,13 @@ class VoucherUserService {
                     as: 'voucher'
                 }
             }, {
+                $addFields: {
+                    voucher: { $arrayElemAt: ['$voucher', 0] }
+                }
+            }, {
                 $project: {
                     _id: 1,
-                    name_voucher: '$voucher.name_voucher',
+                    voucher_name: '$voucher.voucher_name',
                     voucher_description: '$voucher.description',
                     voucher_type: '$voucher.voucher_type',
                     voucher_value: '$voucher.voucher_value',
@@ -33,10 +38,21 @@ class VoucherUserService {
                     time_end: '$voucher.time_end',
                     quantity: '$voucher.quantity',
                     min_order_value: '$voucher.min_order_value',
-                    voucher_id: '$voucher._id'
+                    voucher_id: '$voucher._id',
+                    is_voucher_new_user: '$voucher.is_voucher_new_user',
+                    is_used: 1
                 }
             }
-        ])
+        ]
+        if (min_order_value) {
+            const number_min_order_value = Number.parseInt(min_order_value)
+            pipeline.push({
+                $match: {
+                    min_order_value: { $lte: number_min_order_value }
+                }
+            })
+        }
+        const vouchers = await voucher_userModel.aggregate(pipeline)
         return vouchers
     }
 

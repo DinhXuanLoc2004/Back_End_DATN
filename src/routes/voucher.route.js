@@ -5,7 +5,7 @@ const VoucherController = require('../controller/voucher.controller')
 const router = express.Router()
 
 router.post('/create_voucher', upload.single('image'), uploadSingleImageMiddleware, asyncHandler(VoucherController.createVoucher))
-router.get('/get_all_voucher', asyncHandler(VoucherController.getAllVouchers))
+router.get('/get_all_vouchers', asyncHandler(VoucherController.getAllVouchers))
 router.get('/get_detail_voucher', asyncHandler(VoucherController.getDetailVoucher))
 
 module.exports = router

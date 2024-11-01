@@ -18,6 +18,10 @@ const unselectFilesData = ({ fields = [], object = {} }) => {
     );
 };
 
+const selectMainFilesData = (object = {}) => unselectFilesData({ fields: ['createdAt', 'updatedAt', '__v'], object })
+
+const validateHexColor = (hex_color) => !/^#[0-9A-Fa-f]{6}$/.test(hex_color)
+
 const deleteImage = (public_id) => {
     cloudianry.uploader.destroy(public_id, (error, result) => {
         if (error) {
@@ -30,7 +34,7 @@ const deleteImage = (public_id) => {
 
 const validateTime = (time_start, time_end) => {
     const date = new Date()
-    if (date > convertToDate(time_start) || convertToDate(time_end) < date) throw new ConflictRequestError('Invalid time!')
+    if (convertToDate(time_end) < date) throw new ConflictRequestError('Invalid time!')
     if (convertToDate(time_start) >= convertToDate(time_end)) throw new ConflictRequestError('Start time must be before end time!')
 }
 
@@ -72,5 +76,7 @@ module.exports = {
     convertToDate,
     unselectFilesData,
     deleteImage,
-    validateTime
+    validateTime,
+    selectMainFilesData,
+    validateHexColor
 }
