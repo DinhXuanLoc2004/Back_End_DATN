@@ -154,7 +154,8 @@ class CartService {
                     name_category: '$product_variant.product.category.name_category',
                     name_brand: '$product_variant.product.brand.name_brand',
                     product_sales: '$product_variant.product.product_sales.sale',
-                    total_discount: { $sum: '$product_variant.product.product_sales.sale.discount' }
+                    total_discount: { $sum: '$product_variant.product.product_sales.sale.discount' },
+                    product_id: '$product_variant.product_id'
                 }
             }
         ])

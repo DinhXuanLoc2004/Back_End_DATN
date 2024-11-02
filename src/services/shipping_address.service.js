@@ -1,7 +1,7 @@
-const { NotFoundError, ConflictRequestError } = require("../core/error.reponse")
+const { NotFoundError, ConflictRequestError, BadRequestError } = require("../core/error.reponse")
 const { shipping_addressModel } = require("../models/shipping_address.model")
 const { userModel } = require("../models/user.model")
-const { unselectFilesData } = require("../utils")
+const { unselectFilesData, selectMainFilesData } = require("../utils")
 
 class ShippingAddressService {
     static deleteShippingAddress = async ({ query }) => {
@@ -45,6 +45,7 @@ class ShippingAddressService {
         const { _id } = query
         const shipping_address = await shipping_addressModel.findById(_id).lean()
         if (!shipping_address) throw new NotFoundError('Not found shipping address!')
+        if (shipping_address.is_default) return 'The shipping address is in default status!'
         await shipping_addressModel.updateMany({
             user_id: shipping_address.user_id
         }, {
@@ -117,7 +118,7 @@ class ShippingAddressService {
             ward_commune, specific_address, is_default, user_id
         })
         if (!newshippingAddress) ConflictRequestError('Conficted create shipping address')
-        return newshippingAddress
+        return selectMainFilesData(newshippingAddress._doc)
     }
 }
 

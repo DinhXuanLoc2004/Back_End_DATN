@@ -18,7 +18,10 @@ const unselectFilesData = ({ fields = [], object = {} }) => {
     );
 };
 
-const selectMainFilesData = (object = {}) => unselectFilesData({ fields: ['createdAt', 'updatedAt', '__v'], object })
+const selectMainFilesData = (object = {}) => {
+    const data =  unselectFilesData({ fields: ['createdAt', 'updatedAt', '__v'], object })
+    return data
+}
 
 const validateHexColor = (hex_color) => !/^#[0-9A-Fa-f]{6}$/.test(hex_color)
 
