@@ -16,10 +16,9 @@ class PaymentMethodService {
             key2: process.env.KEY_2_ZALO_PAY,
             endpoint: "https://sb-openapi.zalopay.vn/v2/create"
         };
-
-        console.log(JSON.stringify(items));
-
-        const embed_data = {};
+        const embed_data = {
+            redirecturl: "t-shop-deeplink://app"
+        };
         const order = {
             app_id: config.app_id,
             app_trans_id: `${moment().format('YYMMDD')}_${order_id}`, // translation missing: vi.docs.shared.sample_code.comments.app_trans_id
@@ -49,9 +48,7 @@ class PaymentMethodService {
         const config = {
             key2: process.env.KEY_2_ZALO_PAY
         }
-        console.log('body zalopay callback:: ', body);
         const macHoder = CryptoJS.HmacSHA256(data, config.key2).toString()
-
         if (mac !== macHoder) {
             return {
                 return_code: -1,
@@ -59,9 +56,7 @@ class PaymentMethodService {
             }
         } else {
             const dataJson = JSON.parse(data, config.key2)
-            console.log('dataJson:: ', dataJson);
             const order_id = dataJson["app_trans_id"].split('_')[1]
-            console.log('order_id:: ', order_id);
             const orderUpdate = await orderModel.findByIdAndUpdate(order_id, { payment_status: true }, { new: true })
             if (!orderUpdate) throw new ConflictRequestError('Error update payment status with callback zalo pay!')
             return {
