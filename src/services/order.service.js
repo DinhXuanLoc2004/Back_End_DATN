@@ -5,6 +5,7 @@ const { payment_methodModel } = require("../models/payment_method.model")
 const { product_orderModel } = require("../models/product_order.model")
 const { product_variantModel } = require("../models/product_variant.model")
 const { userModel } = require("../models/user.model")
+const { voucher_userModel } = require("../models/voucher_user.model")
 const { selectMainFilesData } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 
@@ -23,7 +24,7 @@ class OrderService {
         const newOrder = await orderModel.create({
             user_id,
             full_name,
-            phone: Number(phone),
+            phone,
             province_city,
             district,
             ward_commune,
@@ -38,6 +39,8 @@ class OrderService {
             total_amount,
             order_status
         })
+
+        await voucher_userModel.findByIdAndUpdate(voucher_user_id, {is_used: true})
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
         let newOrderResponse = {}
         newOrderResponse = selectMainFilesData(newOrder._doc)
@@ -77,7 +80,6 @@ class OrderService {
                 total_amount, address: `${specific_address}, ${ward_commune}, ${district}, ${province_city}`,
                 phone, email: user._id, items
             })
-            console.log(zalo_pay.zp_trans_token);
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
             newOrderResponse.payment_method = {
                 payment_type: "Zalo Pay",

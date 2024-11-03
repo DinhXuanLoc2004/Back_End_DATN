@@ -17,20 +17,22 @@ class PaymentMethodService {
             endpoint: "https://sb-openapi.zalopay.vn/v2/create"
         };
 
+        console.log(JSON.stringify(items));
+
         const embed_data = {};
         const order = {
             app_id: config.app_id,
             app_trans_id: `${moment().format('YYMMDD')}_${order_id}`, // translation missing: vi.docs.shared.sample_code.comments.app_trans_id
-            app_user: "user123",
+            app_user: email,
             app_time: Date.now(),
             expire_duration_seconds: 900,
             amount: total_amount,
             item: JSON.stringify(items),
             embed_data: JSON.stringify(embed_data),
             amount: total_amount,
-            description: `T-Shop - Payment for the order #${order_id}`,
+            description: `T-Shop - Payment for the order`,
             bank_code: "zalopayapp",
-            callback_url: `https://backenddatn-production.up.railway.app/v1/api/payment_method/call_back_zalo_pay/?order_id=${order_id}`,
+            callback_url: `https://backenddatn-production.up.railway.app/v1/api/payment_method/call_back_zalo_pay`,
             phone,
             email,
             address
@@ -47,6 +49,7 @@ class PaymentMethodService {
         const config = {
             key2: process.env.KEY_2_ZALO_PAY
         }
+        console.log('body zalopay callback:: ', body);
         const macHoder = CryptoJS.HmacSHA256(data, config.key2).toString()
 
         if (mac !== macHoder) {
