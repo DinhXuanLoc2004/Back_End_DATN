@@ -3,6 +3,17 @@ const bcrypt = require('bcrypt')
 const { Types } = require('mongoose')
 const cloudianry = require('../configs/config.cloudinary')
 const { ConflictRequestError } = require('../core/error.reponse')
+const crypto = require('crypto')
+
+const createdSignatueMomo = ({ accessKey, secretKey, amount, extraData,
+    ipnUrl, orderId, orderInfo, partnerCode,
+    redirectUrl, requestId, requestType }) => {
+    var rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType;
+    var signature = crypto.createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
+    return signature
+}
 
 const convertToDate = time => new Date(time)
 
@@ -19,7 +30,7 @@ const unselectFilesData = ({ fields = [], object = {} }) => {
 };
 
 const selectMainFilesData = (object = {}) => {
-    const data =  unselectFilesData({ fields: ['createdAt', 'updatedAt', '__v'], object })
+    const data = unselectFilesData({ fields: ['createdAt', 'updatedAt', '__v'], object })
     return data
 }
 
@@ -81,5 +92,6 @@ module.exports = {
     deleteImage,
     validateTime,
     selectMainFilesData,
-    validateHexColor
+    validateHexColor,
+    createdSignatueMomo
 }

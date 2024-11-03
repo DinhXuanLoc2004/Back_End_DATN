@@ -11,13 +11,7 @@ const product_orderSchema = new mongoose.Schema({
     product_variant_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT_VARIANT },
     quantity: { type: Number, require: true },
     price: { type: Number, require: true },
-    product_sales: [
-        {
-            product_sale_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT_SALE },
-            discount: { type: Number }
-        }
-    ],
-    total_discount: { type: Number },
+    discount: { type: Number },
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_PRODUCT_ORDER
