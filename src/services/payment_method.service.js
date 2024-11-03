@@ -59,7 +59,9 @@ class PaymentMethodService {
             }
         } else {
             const dataJson = JSON.parse(data, config.key2)
-            const order_id = dataJson.app_trans_id.split('_')[1]
+            console.log('dataJson:: ', dataJson);
+            const order_id = dataJson["app_trans_id"].split('_')[1]
+            console.log('order_id:: ', order_id);
             const orderUpdate = await orderModel.findByIdAndUpdate(order_id, { payment_status: true }, { new: true })
             if (!orderUpdate) throw new ConflictRequestError('Error update payment status with callback zalo pay!')
             return {
