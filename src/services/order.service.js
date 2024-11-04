@@ -40,7 +40,7 @@ class OrderService {
             order_status
         })
 
-        await voucher_userModel.findByIdAndUpdate(voucher_user_id, {is_used: true})
+        await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
         let newOrderResponse = {}
         newOrderResponse = selectMainFilesData(newOrder._doc)
@@ -81,10 +81,8 @@ class OrderService {
                 phone, email: user._id, items
             })
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
-            newOrderResponse.payment_method = {
-                payment_type: "Zalo Pay",
-                zp_trans_token: zalo_pay.zp_trans_token
-            }
+            newOrderResponse.payment_type = 'Zalo Pay'
+            newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
         }
 
         return newOrderResponse
