@@ -19,6 +19,7 @@ class OrderService {
             total_amount,
             order_status,
             products_order,
+            cart_ids
         } = body
 
         const newOrder = await orderModel.create({
@@ -40,8 +41,10 @@ class OrderService {
             order_status
         })
 
-        await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
+
+        if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
+        
         let newOrderResponse = {}
         newOrderResponse = selectMainFilesData(newOrder._doc)
 
@@ -56,15 +59,16 @@ class OrderService {
                 price: product_order.price,
                 discount: product_order.discount,
             })
-            await cartModel.findByIdAndDelete(product_order.cart_id)
             if (!new_product_order) throw new ConflictRequestError('Conflict created product order!')
             new_products_order.push(selectMainFilesData(new_product_order))
         }
 
         if (new_products_order.length < arr_products_order.length) throw new ConflictRequestError('Conflict created array products order')
 
-        const payment_method = await payment_methodModel.findById(payment_method_id).lean()
+        await cartModel.deleteMany({ _id: { $in: cart_ids } })
+
         const user = await userModel.findById(user_id).lean()
+        const payment_method = await payment_methodModel.findById(payment_method_id).lean()
         if (payment_method.name_payment === 'Zalo Pay') {
             const items = []
             for (const item of arr_products_order) {
@@ -78,7 +82,7 @@ class OrderService {
             const zalo_pay = await PaymentMethodService.payment_zalopay({
                 order_id: newOrder._id,
                 total_amount, address: `${specific_address}, ${ward_commune}, ${district}, ${province_city}`,
-                phone, email: user._id, items
+                phone, email: user.email, items
             })
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
             newOrderResponse.payment_type = 'Zalo Pay'
