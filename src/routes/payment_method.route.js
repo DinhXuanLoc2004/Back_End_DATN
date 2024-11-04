@@ -9,5 +9,6 @@ router.post('/add_payment_method', upload.single('image'), uploadSingleImageMidd
 router.post('/test_payment_momo', asyncHandler(PaymentMethodController.paymentMomo))
 router.post('/payment_zalo_pay', asyncHandler(PaymentMethodController.paymentZaloPay))
 router.post('/call_back_zalo_pay', asyncHandler(PaymentMethodController.callbackZaloPay))
+router.get('/get_all_payment', asyncHandler(PaymentMethodController.getAllPaymentPathod))
 
 module.exports = router

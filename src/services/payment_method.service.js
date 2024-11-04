@@ -9,6 +9,7 @@ require('dotenv').config()
 
 class PaymentMethodService {
 
+
     static payment_zalopay = async ({ order_id, total_amount, phone, email, address, items }) => {
         const config = {
             app_id: process.env.APP_ID_ZALO_PAY,
@@ -117,6 +118,19 @@ class PaymentMethodService {
         }
 
         return (await axios(options)).data
+    }
+
+    static getAllPaymentMethod = async () => {
+        const payment_methods = await payment_methodModel.aggregate([
+            {
+                $project: {
+                    createdAt: 0,
+                    updatedAt: 0,
+                    __v: 0
+                }
+            }
+        ])
+        return payment_methods
     }
 
     static addPaymentMethod = async ({ body }) => {

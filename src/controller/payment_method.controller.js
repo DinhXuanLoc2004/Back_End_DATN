@@ -2,6 +2,13 @@ const { CREATED, OK } = require("../core/success.response")
 const PaymentMethodService = require("../services/payment_method.service")
 
 class PaymentMethodController {
+    static getAllPaymentPathod = async (req, res, next) => {
+        new OK({
+            message: 'Gett all payment method',
+            metadata: await PaymentMethodService.getAllPaymentMethod()
+        }).send(res)
+    }
+
     static paymentZaloPay = async (req, res, next) => {
         new OK({
             message: 'created link payment zalo pay success!',
@@ -12,7 +19,7 @@ class PaymentMethodController {
     static callbackZaloPay = async (req, res, next) => {
         new OK({
             message: 'Callback zalo pay success!',
-            metadata: await PaymentMethodService.paymet_zalopay_callback({body: req.body})
+            metadata: await PaymentMethodService.paymet_zalopay_callback({ body: req.body })
         }).send(res)
     }
 
