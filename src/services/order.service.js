@@ -41,6 +41,8 @@ class OrderService {
             order_status
         })
 
+        console.log(body);
+
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
 
         if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
@@ -64,7 +66,6 @@ class OrderService {
         }
 
         if (new_products_order.length < arr_products_order.length) throw new ConflictRequestError('Conflict created array products order')
-
         await cartModel.deleteMany({ _id: { $in: cart_ids } })
 
         const user = await userModel.findById(user_id).lean()

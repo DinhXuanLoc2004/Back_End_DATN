@@ -9,7 +9,6 @@ require('dotenv').config()
 
 class PaymentMethodService {
 
-
     static payment_zalopay = async ({ order_id, total_amount, phone, email, address, items }) => {
         const config = {
             app_id: process.env.APP_ID_ZALO_PAY,
