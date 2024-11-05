@@ -38,10 +38,16 @@ class ProductController {
         }).send(res)
     }
     static addProduct = async (req, res, next) => {
-        new CREATED({
-            message: 'Created Product Success!',
-            metadata: await ProductService.addProduct({ body: req.body })
-        }).send(res)
+        try {
+            const productData = await ProductService.addProduct({ body: req.body });
+            new CREATED({
+                message: 'Created Product Success!',
+                metadata: productData
+            }).send(res);
+        } catch (error) {
+            console.error('Error adding product:', error);
+            res.status(500).send({ message: 'Error adding product', error: error.message });
+        }
     }
 }
 

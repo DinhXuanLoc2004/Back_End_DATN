@@ -20,7 +20,7 @@ class ProductService {
     static getColorSizeToProduct = async ({ query }) => {
         const { product_id } = query;
         const product = await productModel.findById(product_id).lean()
-        const thumb = product.images_product.map(image => image.url);
+        const thumb = product.images_product[0].url
         const Ob_product_id = convertToObjectId(product_id)
         const variants = await product_variantModel.aggregate([{
             $match: { product_id: Ob_product_id }

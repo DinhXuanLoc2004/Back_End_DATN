@@ -49,7 +49,7 @@ class SizeService {
     const sizes = await sizeModel.find({ is_delete: false });
     return {
       sizes: sizes.map((size) =>
-        selectFilesData({ fileds: ["size"], object: size })
+        selectFilesData({ fileds: ["_id", "size"], object: size })
       ),
     };
   };

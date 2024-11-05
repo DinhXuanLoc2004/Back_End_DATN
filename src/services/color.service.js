@@ -5,6 +5,10 @@ const { selectFilesData } = require("../utils")
 class ColorService {
     static addColor = async ({ hex_color, name_color }) => {
 
+        if (!hex_color || !name_color) {
+            throw new ConflictRequestError("Both hex color and name color are required.")
+        }
+
         if (hex_color && !/^#[0-9A-Fa-f]{6}$/.test(hex_color)) {
             throw new ConflictRequestError("Invalid hex color format. Expected format: #000000")
         }
@@ -24,11 +28,15 @@ class ColorService {
         })
         if (!newColor) throw new ConflictRequestError('Error creating color')
         return {
-            newColor: selectFilesData({ fileds: ['hex_color', 'name_color'], object: newColor })
+            newColor: selectFilesData({ fileds: ["hex_color", "name_color"], object: newColor })
         }
     }
 
     static updateColor = async (id, { hex_color, name_color }) => {
+
+        if (!hex_color || !name_color) {
+            throw new ConflictRequestError("Both hex color and name color are required.")
+        }
         
         if (hex_color && !/^#[0-9A-Fa-f]{6}$/.test(hex_color)) {
             throw new ConflictRequestError("Invalid hex color format. Expected format: #000000")
@@ -50,7 +58,7 @@ class ColorService {
         )
         if (!updatedColor) throw new NotFoundError('Color not found')
         return {
-            updatedColor: selectFilesData({ fileds: ['hex_color', 'name_color'], object: updatedColor })
+            updatedColor: selectFilesData({ fileds: ["hex_color", "name_color"], object: updatedColor })
         }
     }
 
@@ -68,7 +76,11 @@ class ColorService {
 
     static getAllColors = async () => {
         const colors = await colorModel.find({ is_delete: false })
-        return colors.map(color => selectFilesData({ fileds: ['hex_color', 'name_color'], object: color }))
+        return{ 
+            colors: colors.map(color => 
+                selectFilesData({ fileds: ["_id", "hex_color", "name_color"], object: color })
+            )
+        };
     }
 }
 
