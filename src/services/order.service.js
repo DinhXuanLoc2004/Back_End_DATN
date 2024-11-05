@@ -22,7 +22,7 @@ class OrderService {
             cart_ids
         } = body
 
-        const newOrder = await orderModel.create({
+        let newOrder  = await orderModel.create({
             user_id,
             full_name,
             phone,
@@ -30,7 +30,7 @@ class OrderService {
             district,
             ward_commune,
             specific_address,
-            voucher_user_id,
+            voucher_user_id: voucher_user_id || null,
             type_voucher,
             value_voucher,
             delivery_method_id,
@@ -44,7 +44,7 @@ class OrderService {
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
 
         if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
-        
+
         let newOrderResponse = {}
         newOrderResponse = selectMainFilesData(newOrder._doc)
 

@@ -8,6 +8,7 @@ class VoucherUserService {
         const { user_id, is_used, min_order_value } = query
         const user_Obid = convertToObjectId(user_id)
         const is_used_boolean = is_used === 'true'
+        const date = new Date()
         let pipeline = [
             {
                 $match: {
@@ -39,8 +40,22 @@ class VoucherUserService {
                     quantity: '$voucher.quantity',
                     min_order_value: '$voucher.min_order_value',
                     voucher_id: '$voucher._id',
+                    is_active: '$voucher.is_active',
                     is_voucher_new_user: '$voucher.is_voucher_new_user',
                     is_used: 1
+                }
+            }, {
+                $match: {
+                    is_active: true,
+                    time_start: { $lt: date },
+                    time_end: { $gt: date },
+                    $or: [
+                        {
+                            quantity: 'Infinity'
+                        }, {
+                            quantity: { $gt: 0 }
+                        }
+                    ]
                 }
             }
         ]

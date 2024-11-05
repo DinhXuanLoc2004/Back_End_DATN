@@ -16,7 +16,7 @@ const orderSchema = new mongoose.Schema({
     district: { type: String, require: true },
     ward_commune: { type: String, require: true },
     specific_address: { type: String, require: true },
-    voucher_user_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_VOUCHER_USER },
+    voucher_user_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_VOUCHER_USER, default: null },
     type_voucher: { type: String },
     value_voucher: { type: Number },
     delivery_method_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_DELIVERY_METHOD },
