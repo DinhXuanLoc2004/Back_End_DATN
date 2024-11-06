@@ -24,9 +24,9 @@ class BrandService {
         };
     };
 
-    static getBrands = async () => {
+    static getAllBrands = async () => {
         const brands = await brandModel.find({ is_deleted: false });
-        return brands.map((brand) => selectFilesData({ fileds: ['name_brand', 'image_brand'], object: brand }));
+        return brands.map((brand) => selectFilesData({ fileds: ['_id', 'name_brand', 'image_brand'], object: brand }));
     };
 
     static updateBrand = async (brandId, updateData) => {
@@ -38,7 +38,7 @@ class BrandService {
         if (!updatedBrand) throw new Error('Brand not found');
         return {
             message: 'Brand updated successfully!',
-            brand: selectFilesData({ fileds: ['_id', 'name_brand', 'image_brand'], object: updatedBrand })
+            brand: selectFilesData({ fileds: ['name_brand', 'image_brand'], object: updatedBrand })
         };
     };
 }
