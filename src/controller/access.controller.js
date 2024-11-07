@@ -2,6 +2,13 @@ const { CREATED, OK } = require("../core/success.response");
 const AccessService = require("../services/access.service");
 
 class AccessController {
+  static setFcmToken = async (req, res, next) => {
+    new OK({
+      message: 'Set fcm token success!',
+      metadata: await AccessService.setFcmToken({ query: req.query, body: req.body })
+    }).send(res)
+  }
+
   static verifyAccountOtp = async (req, res, next) => {
     new OK({
       message: "Verify OTP Success!",
@@ -23,7 +30,7 @@ class AccessController {
       metadata: await AccessService.sendOtp({ body: req.body }),
     }).send(res);
   };
-  
+
   static login = async (req, res, next) => {
     const { email, password } = req.body;
     new OK({

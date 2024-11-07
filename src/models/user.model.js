@@ -18,7 +18,8 @@ var userSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'inactive'],
         default: 'inactive'
-    }
+    },
+    fcm_token: { type: String, default: "" }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_USER

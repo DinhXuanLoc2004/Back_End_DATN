@@ -6,11 +6,19 @@ const {
 } = require("../core/error.reponse");
 const { otpModel } = require("../models/otp.model");
 const { userModel } = require("../models/user.model");
-const { hashData, selectFilesData, compareData } = require("../utils");
+const { hashData, selectFilesData, compareData, selectMainFilesData } = require("../utils");
 const OtpService = require("./otp.service");
 const TokenService = require("./token.service");
 
 class AccessService {
+  static setFcmToken = async ({ query, body }) => {
+    const { user_id } = query
+    const { fcm_token } = body
+    const userUpdated = await userModel.findByIdAndUpdate(user_id, { fcm_token }, { new: true })
+    if (!userUpdated) throw new ConflictRequestError('Conflict set fcm token!')
+    return userUpdated.fcm_token
+  }
+
   static login = async ({ email, password }) => {
     const userHoder = await userModel.findOne({ email: email }).lean();
     if (!userHoder) throw new AuthFailureError("Email is incorrect!");

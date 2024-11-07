@@ -23,5 +23,6 @@ router.use(`${BASE_URL}/voucher_user`, require('./voucher_user.route'))
 router.use(`${BASE_URL}/payment_method`, require('./payment_method.route'))
 router.use(`${BASE_URL}/delivery_method`, require('./delivery_method.route'))
 router.use(`${BASE_URL}/order`, require('./order.route'))
+router.use(`${BASE_URL}/notity`, require('./notifycation.toute'))
 
 module.exports = router
