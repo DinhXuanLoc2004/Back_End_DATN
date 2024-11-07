@@ -3,7 +3,6 @@ const { DOCUMENT_NAME_USER } = require('./user.model')
 const { DOCUMENT_NAME_VOUCHER } = require('./voucher.model')
 const { DOCUMENT_NAME_VOUCHER_USER } = require('./voucher_user.model')
 const { DOCUMENT_NAME_DELIVERY_METHOD } = require('./delivery_method.model')
-const { DOCUMENT_NAME_PAYMENT_METHOD } = require('./payment_method.model')
 
 const DOCUMENT_NAME_ORDER = 'Order'
 const COLLECTION_NAME_ORDER = 'Orders'
@@ -21,14 +20,14 @@ const orderSchema = new mongoose.Schema({
     value_voucher: { type: Number },
     delivery_method_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_DELIVERY_METHOD },
     delivery_fee: { type: Number },
-    payment_method_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PAYMENT_METHOD },
+    payment_method: { type: String, enum: ['COD', 'Zalo Pay', 'PayPal'] },
     payment_status: { type: Boolean, require: true, default: false },
     total_amount: { type: Number, require: true },
     order_status: {
         type: String,
-        enum: ['confirming', 'confirmed', 'delivering', 
-            'delivered_successfully', 'delivery_failed', 'canceled'],
-        default: 'confirming'
+        enum: ['confirming', 'confirmed', 'delivering',
+            'delivered_successfully', 'delivery_failed', 'canceled', "unpaid"],
+        default: 'unpaid'
     }
 }, {
     timestamps: true,
@@ -37,4 +36,4 @@ const orderSchema = new mongoose.Schema({
 
 const orderModel = mongoose.model(DOCUMENT_NAME_ORDER, orderSchema)
 
-module.exports = {orderModel, DOCUMENT_NAME_ORDER, COLLECTION_NAME_ORDER}
+module.exports = { orderModel, DOCUMENT_NAME_ORDER, COLLECTION_NAME_ORDER }

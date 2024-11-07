@@ -1,12 +1,11 @@
 const { ConflictRequestError, BadRequestError } = require("../core/error.reponse")
 const { cartModel } = require("../models/cart.model")
 const { orderModel } = require("../models/order.model")
-const { payment_methodModel } = require("../models/payment_method.model")
 const { product_orderModel } = require("../models/product_order.model")
 const { product_variantModel } = require("../models/product_variant.model")
 const { userModel } = require("../models/user.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
-const { selectMainFilesData } = require("../utils")
+const { selectMainFilesData, convertVNDToUSD } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 
 class OrderService {
@@ -15,14 +14,14 @@ class OrderService {
             user_id, full_name, phone, province_city, district, ward_commune, specific_address,
             voucher_user_id, type_voucher, value_voucher,
             delivery_method_id, delivery_fee,
-            payment_method_id, payment_status,
+            payment_method, payment_status,
             total_amount,
             order_status,
             products_order,
             cart_ids
         } = body
 
-        let newOrder  = await orderModel.create({
+        let newOrder = await orderModel.create({
             user_id,
             full_name,
             phone,
@@ -35,13 +34,11 @@ class OrderService {
             value_voucher,
             delivery_method_id,
             delivery_fee,
-            payment_method_id,
+            payment_method,
             payment_status,
             total_amount,
-            order_status
+            order_status: order_status ? order_status : payment_method === 'COD' ? 'confirming' : 'unpaid'
         })
-
-        console.log(body);
 
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
 
@@ -69,8 +66,7 @@ class OrderService {
         await cartModel.deleteMany({ _id: { $in: cart_ids } })
 
         const user = await userModel.findById(user_id).lean()
-        const payment_method = await payment_methodModel.findById(payment_method_id).lean()
-        if (payment_method.name_payment === 'Zalo Pay') {
+        if (payment_method === 'Zalo Pay') {
             const items = []
             for (const item of arr_products_order) {
                 items.push({
@@ -86,8 +82,16 @@ class OrderService {
                 phone, email: user.email, items
             })
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
-            newOrderResponse.payment_type = 'Zalo Pay'
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
+        }
+
+        if (payment_method === 'PayPal') {
+            const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
+            if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
+            const approve = paypal.links.find(link => link.rel === 'approve').href
+            newOrderResponse.approve = approve
+            newOrderResponse.id_order_paypal = paypal.id
+            newOrderResponse.zp_trans_token = ''
         }
 
         return newOrderResponse

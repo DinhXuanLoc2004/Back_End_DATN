@@ -1,6 +1,5 @@
 const { default: axios } = require("axios");
 const { ConflictRequestError } = require("../core/error.reponse")
-const { payment_methodModel } = require("../models/payment_method.model")
 const { selectMainFilesData, createdSignatueMomo } = require("../utils")
 const CryptoJS = require('crypto-js');
 const moment = require('moment');
@@ -8,6 +7,68 @@ const { orderModel } = require("../models/order.model");
 require('dotenv').config()
 
 class PaymentMethodService {
+    static payment_paypal = async ({ amount }) => {
+        const access_token = await this.get_token_paypal()
+
+        const response = await axios({
+            url: 'https://api-m.sandbox.paypal.com/v2/checkout/orders',
+            method: 'post',
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                intent: 'CAPTURE',
+                purchase_units: [
+                    {
+                        amount: {
+                            currency_code: 'USD',
+                            value: `${amount}`,
+                        }
+                    }
+                ],
+                applition_context: {
+                    return_url: 'https://backenddatn-production.up.railway.app/v1/api/payment_method/return_url_paypal',
+                    cancel_url: 'https://example.cancel.com'
+                }
+            })
+        })
+
+        return response.data
+    }
+
+    static return_url_paypal = async ({body}) => {
+        console.log('body return url:: ', body);
+        return 'concac 123'
+    }
+
+    static async capture_payment({ id_order_paypal, order_id }) {
+        const access_token = await this.get_token_paypal();
+
+        const response = await axios({
+            url: `https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderId}/capture`,
+            method: 'post',
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return response.data;
+    }
+
+    static get_token_paypal = async () => {
+        const response = await axios({
+            url: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
+            method: 'post',
+            data: 'grant_type=client_credentials',
+            auth: {
+                username: process.env.PAYPAL_CLIENT_ID,
+                password: process.env.PAYPAL_SECRET_KEY
+            }
+        })
+        return response.data.access_token
+    }
 
     static payment_zalopay = async ({ order_id, total_amount, phone, email, address, items }) => {
         const config = {
@@ -64,83 +125,6 @@ class PaymentMethodService {
                 return_message: 'success'
             }
         }
-    }
-
-    static payment_momo = async ({ order_id, total_amout }) => {
-        
-        var accessKey = 'F8BBA842ECF85';
-        var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-        var orderInfo = 'pay with MoMo';
-        var partnerCode = 'MOMO';
-        var redirectUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
-        var ipnUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
-        var requestType = "captureWallet";
-        var amount = '50000';
-        var orderId = partnerCode + new Date().getTime();
-        var requestId = orderId;
-        var extraData = '';
-        var paymentCode = 'T8Qii53fAXyUftPV3m9ysyRhEanUs9KlOPfHgpMR0ON50U10Bh+vZdpJU7VY4z+Z2y77fJHkoDc69scwwzLuW5MzeUKTwPo3ZMaB29imm6YulqnWfTkgzqRaion+EuD7FN9wZ4aXE1+mRt0gHsU193y+yxtRgpmY7SDMU9hCKoQtYyHsfFR5FUAOAKMdw2fzQqpToei3rnaYvZuYaxolprm9+/+WIETnPUDlxCYOiw7vPeaaYQQH0BF0TxyU3zu36ODx980rJvPAgtJzH1gUrlxcSS1HQeQ9ZaVM1eOK/jl8KJm6ijOwErHGbgf/hVymUQG65rHU2MWz9U8QUjvDWA==';
-        var orderGroupId = '';
-        var autoCapture = true;
-        var lang = 'vi';
-
-        const signature = createdSignatueMomo({
-            accessKey, secretKey, amount, extraData,
-            ipnUrl, orderId, orderInfo, partnerCode, redirectUrl, requestId, requestType
-        })
-
-        const requestBody = JSON.stringify({
-            partnerCode: partnerCode,
-            partnerName: "Test",
-            storeId: "MomoTestStore",
-            requestId: requestId,
-            amount: amount,
-            orderId: orderId,
-            orderInfo: orderInfo,
-            redirectUrl: redirectUrl,
-            ipnUrl: ipnUrl,
-            lang: lang,
-            requestType: requestType,
-            autoCapture: autoCapture,
-            extraData: extraData,
-            orderGroupId: orderGroupId,
-            signature: signature
-        });
-
-        const options = {
-            url: 'https://test-payment.momo.vn/v2/gateway/api/create',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(requestBody)
-            },
-            data: requestBody
-        }
-
-        return (await axios(options)).data
-    }
-
-    static getAllPaymentMethod = async () => {
-        const payment_methods = await payment_methodModel.aggregate([
-            {
-                $project: {
-                    createdAt: 0,
-                    updatedAt: 0,
-                    __v: 0
-                }
-            }
-        ])
-        return payment_methods
-    }
-
-    static addPaymentMethod = async ({ body }) => {
-        const { name_payment, image } = body
-        const newPaymentMethod = await payment_methodModel.create({
-            name_payment,
-            image_payment: image
-        })
-        if (!newPaymentMethod) throw new ConflictRequestError('Conflict create new payment method!')
-        return selectMainFilesData(newPaymentMethod._doc)
     }
 }
 

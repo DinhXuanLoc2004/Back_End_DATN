@@ -19,6 +19,12 @@ const convertToDate = time => new Date(time)
 
 const convertToObjectId = _id => new Types.ObjectId(_id)
 
+const convertVNDToUSD = (amountInVND) => {
+    const exchangeRate = 24000;
+    const amountInUSD = amountInVND / exchangeRate;
+    return amountInUSD.toFixed(2);
+}
+
 const selectFilesData = ({ fileds = [], object = {} }) => {
     return _.pick(object, fileds)
 }
@@ -93,5 +99,6 @@ module.exports = {
     validateTime,
     selectMainFilesData,
     validateHexColor,
-    createdSignatueMomo
+    createdSignatueMomo,
+    convertVNDToUSD
 }
