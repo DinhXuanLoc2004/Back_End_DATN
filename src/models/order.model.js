@@ -28,7 +28,8 @@ const orderSchema = new mongoose.Schema({
         enum: ['confirming', 'confirmed', 'delivering',
             'delivered_successfully', 'delivery_failed', 'canceled', "unpaid"],
         default: 'unpaid'
-    }
+    },
+    paypal_id: {type: String, default: ''}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_ORDER

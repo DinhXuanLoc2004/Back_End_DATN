@@ -1,14 +1,61 @@
 const { ConflictRequestError, BadRequestError } = require("../core/error.reponse")
 const { cartModel } = require("../models/cart.model")
 const { orderModel } = require("../models/order.model")
-const { product_orderModel } = require("../models/product_order.model")
+const { product_orderModel, COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { product_variantModel } = require("../models/product_variant.model")
 const { userModel } = require("../models/user.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
-const { selectMainFilesData, convertVNDToUSD } = require("../utils")
+const { selectMainFilesData, convertVNDToUSD, convertToObjectId } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 
 class OrderService {
+    static getOrdersForUser = async ({ query }) => {
+        const { user_id, order_status } = query
+        const user_Obid = convertToObjectId(user_id)
+        let pipeline = [
+            {
+                $match: {
+                    user_id: user_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'products_order'
+                }
+            }, {
+                $project: {
+                    _id: 1,
+                    items: { $size: '$products_order' },
+                    quantity: { $sum: '$products_order.quantity' },
+                    createdAt: 1,
+                    order_status: 1,
+                    total_amount: 1
+                }
+            }, {
+                $sort: {
+                    createdAt: -1
+                }
+            }
+        ]
+        if (order_status) {
+            pipeline.push({
+                $match: {
+                    order_status: order_status
+                }
+            })
+        }
+        const orders = await orderModel.aggregate(pipeline)
+        return orders
+    }
+
+    static findOrderIdByPaypalId = async ({ query }) => {
+        const { paypal_id } = query
+        const order = await orderModel.findOne({ paypal_id: paypal_id }).lean()
+        return order._id
+    }
+
     static createdOrder = async ({ body }) => {
         const {
             user_id, full_name, phone, province_city, district, ward_commune, specific_address,
@@ -87,6 +134,7 @@ class OrderService {
 
         if (payment_method === 'PayPal') {
             const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
+            await orderModel.findByIdAndUpdate(newOrder._id, { paypal_id: paypal.id }, { new: true })
             if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
             const approve = paypal.links.find(link => link.rel === 'approve').href
             newOrderResponse.approve = approve

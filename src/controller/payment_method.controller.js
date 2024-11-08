@@ -4,8 +4,8 @@ const PaymentMethodService = require("../services/payment_method.service")
 class PaymentMethodController {
     static returnURLPaypal = async (req, res, next) => {
         new OK({
-            message: 'cc',
-            metadata: await PaymentMethodService.return_url_paypal({body: req.body})
+            message: 'Return url success!',
+            metadata: await PaymentMethodService.return_url_paypal({query: req.query})
         }).send(res)
     }
 
