@@ -12,20 +12,20 @@ class BrandService {
     };
 
     static deleteBrand = async (brandId) => {
-        const deletedBrand = await brandModel.findByIdAndUpdate(
+        const deleteBrand = await brandModel.findByIdAndUpdate(
             brandId,
-            { is_deleted: true },
+            { is_delete: true },
             { new: true }
         );
-        if (!deletedBrand) throw new Error('Brand not found or already deleted');
+        if (!deleteBrand) throw new Error('Brand not found or already delete');
         return {
-            message: 'Brand deleted successfully!',
-            brand: selectFilesData({ fileds: ['name_brand', 'image_brand', 'is_deleted'], object: deletedBrand })
+            message: 'Brand delete successfully!',
+            brand: selectFilesData({ fileds: ['name_brand', 'image_brand', 'is_delete'], object: deleteBrand })
         };
     };
 
     static getAllBrands = async () => {
-        const brands = await brandModel.find({ is_deleted: false });
+        const brands = await brandModel.find({ is_delete: false });
         return brands.map((brand) => selectFilesData({ fileds: ['_id', 'name_brand', 'image_brand'], object: brand }));
     };
 

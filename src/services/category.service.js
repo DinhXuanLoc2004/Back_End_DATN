@@ -29,7 +29,7 @@ class CategoryService {
 
     static getCategoryDepth = async ({ category_id, depth = 0 }) => {
         const category = await categoryModel.findById(category_id).lean()
-        console.log('category parent::', category);
+        console.log('category parent:', category);
         if (!category) {
             return depth
         }
@@ -42,6 +42,54 @@ class CategoryService {
             if (!category) throw new NotFoundError('Not found parent_id')
         }
     }
+
+    static updateCategory = async ({ id_category, name_category, parent_id, image }) => {
+        
+        const category = await categoryModel.findById(id_category).lean()
+        if (!category) throw new NotFoundError('Category not found')
+        
+        
+        let depth = 0  
+        if (parent_id) {
+            depth = await this.getCategoryDepth({ category_id: parent_id })
+        }
+    
+       
+        const updatedCategory = await categoryModel.findByIdAndUpdate(
+            id_category, 
+            { 
+                name_category, 
+                parent_id, 
+                image_category: image,
+                depth  
+            },
+            { new: true }  
+        ).lean()
+        
+        
+        if (!updatedCategory) throw new ConflictRequestError('Error updating category')
+        
+        return selectFilesData({ fileds: ['name_category', 'parent_id', 'image_category', 'depth'], object: updatedCategory })
+    }
+    
+
+    static deleteCategory = async (id_category) => {
+        
+        const category = await categoryModel.findById(id_category).lean()
+        if (!category) throw new NotFoundError('Category not found')
+        
+        const deletedCategory = await categoryModel.findByIdAndUpdate(
+            id_category, 
+            { is_delete: true }, 
+            { new: true }  
+        ).lean()
+        
+        if (!deletedCategory) throw new ConflictRequestError('Error deleting category')
+        
+        return selectFilesData({ fileds: ['name_category', 'parent_id', 'image_category', 'depth'], object: deletedCategory })
+    }
+    
+    
 }
 
 module.exports = CategoryService

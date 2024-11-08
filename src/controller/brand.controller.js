@@ -16,8 +16,8 @@ class BrandController {
         res.json(result);
     };
 
-    static getBrands = async (req, res, next) => {
-        const brands = await BrandService.getBrands();
+    static getAllBrands = async (req, res, next) => {
+        const brands = await BrandService.getAllBrands();
         res.json({ message: 'Brands fetched successfully', brands });
     };
 

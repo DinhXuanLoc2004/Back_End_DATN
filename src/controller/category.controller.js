@@ -18,6 +18,34 @@ class CategoryController {
             metadata: await CategoryService.addCategory({ name_category, parent_id, image })
         }).send(res)
     }
+
+    static updateCategory = async (req, res, next) => {
+        const { id_category } = req.query 
+        const { name_category, parent_id, image } = req.body  
+        
+        const updatedCategory = await CategoryService.updateCategory({
+            id_category, name_category, parent_id, image
+        })
+        
+        new OK({
+            message: 'Update category success!',
+            metadata: updatedCategory
+        }).send(res)
+    }
+    
+
+    static deleteCategory = async (req, res, next) => {
+        const { id_category } = req.query
+        
+        const deletedCategory = await CategoryService.deleteCategory(id_category)
+        
+        new OK({
+            message: 'Delete category success!',
+            metadata: deletedCategory
+        }).send(res)
+    }
+    
+    
 }
 
 module.exports = CategoryController
