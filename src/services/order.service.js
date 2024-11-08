@@ -92,6 +92,17 @@ class OrderService {
 
         return newOrderResponse
     }
+
+    static getAllOrders = async () => {
+        const orders = await orderModel.find().lean();
+        return orders.map(order => selectMainFilesData(order));
+    }
+
+    static getOrderById = async (orderId) => {
+        const order = await orderModel.findById(orderId).lean();
+        if (!order) throw new BadRequestError("Order not found");
+        return selectMainFilesData(order);
+    }
 }
 
 module.exports = OrderService
