@@ -5,5 +5,8 @@ const { upload, uploadSingleImageMiddleware } = require('../middlewares/uploadfi
 const router = express.Router()
 
 router.post('/add_brand', upload.single(['image']), uploadSingleImageMiddleware, asyncHandler(BrandController.addBrand))
+router.delete('/delete_brand', asyncHandler(BrandController.deleteBrand));
+router.get('/get_all_brands', asyncHandler(BrandController.getAllBrands));
+router.put('/update_brand', asyncHandler(BrandController.updateBrand));
 
 module.exports = router
