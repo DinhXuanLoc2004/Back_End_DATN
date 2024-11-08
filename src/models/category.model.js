@@ -7,7 +7,8 @@ const categorySchema = new mongoose.Schema({
     name_category: { type: String, require: true },
     parent_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
     image_category: { type: Object, default: {} },
-    depth: {type: Number, default: 0}
+    depth: {type: Number, default: 0},
+    is_delete: { type: Boolean, default: false } 
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_CATEGORY
