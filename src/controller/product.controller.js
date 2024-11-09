@@ -49,6 +49,29 @@ class ProductController {
             res.status(500).send({ message: 'Error adding product', error: error.message });
         }
     }
+
+    static updateProduct = async (req, res, next) => {
+        const { product_id } = req.query;
+        try {
+            const updatedProductData = await ProductService.updateProduct({ body: req.body, product_id });
+            new OK({
+                message: 'Product updated successfully!',
+                metadata: updatedProductData
+            }).send(res);
+        } catch (error) {
+            console.error('Error updating product:', error);
+            res.status(500).send({ message: 'Error updating product', error: error.message });
+        }
+    };
+    
+
+    static deleteProduct = async (req, res, next) => {
+        const { product_id } = req.query;
+        new OK({
+            message: 'Product deleted successfully!',
+            metadata: await ProductService.deleteProduct({ product_id })
+        }).send(res);
+    };
 }
 
 module.exports = ProductController

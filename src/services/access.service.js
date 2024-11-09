@@ -116,6 +116,16 @@ class AccessService {
       object: userUpdated,
     });
   };
+
+  static getAllUsers = async () => {
+    const users = await userModel.find().lean();
+    return users.map(user =>
+      selectFilesData({
+        fileds: ["email", "status", "_id", "createdAt", "updatedAt"],
+        object: user,
+      })
+    );
+  };
 }
 
 module.exports = AccessService;

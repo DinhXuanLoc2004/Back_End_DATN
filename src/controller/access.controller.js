@@ -43,6 +43,15 @@ class AccessController {
       metadata: await AccessService.resetPassword({ email, newPassword }),
     }).send(res);
   };
+
+  static getAllUsers = async (req, res, next) => {
+    new OK({
+      message: "Retrieve all users success!",
+      metadata: await AccessService.getAllUsers(),
+    }).send(res);
+  };
 }
+
+
 
 module.exports = AccessController;

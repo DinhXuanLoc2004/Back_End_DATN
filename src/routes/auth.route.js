@@ -9,5 +9,8 @@ router.post('/verify_otp', asyncHandler(accessController.verifyAccountOtp));
 router.post('/resend_otp', asyncHandler(accessController.sendOtp));
 router.post('/forgot_password', asyncHandler(accessController.forgotPassword));
 router.post('/reset_password', asyncHandler(accessController.resetPassword));
+router.get('/get_all_users', asyncHandler(accessController.getAllUsers));
 
 module.exports = router;
+
+

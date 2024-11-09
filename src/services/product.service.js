@@ -263,7 +263,9 @@ class ProductService {
             }
         }
 
-        const matchCondition = {};
+        const matchCondition = {
+            is_delete: false
+        };
 
         if (parent_id) {
             matchCondition.category_id = { $in: parent_id }
@@ -571,6 +573,85 @@ class ProductService {
         newProductResponse.product_variants = new_product_variants
         return newProductResponse
     }
+
+    static updateProduct = async ({ body, product_id }) => {
+        const { name_product, description, images, category_id, brand_id, product_variants } = body;
+    
+        const existingProduct = await productModel.findById(product_id);
+        if (!existingProduct) throw new ConflictRequestError('Product not found!');
+    
+        if (!name_product || !description || !images || !category_id || !brand_id || !product_variants)
+            throw new ConflictRequestError('Please provide full information!');
+    
+        const category = await categoryModel.findById(category_id).lean();
+        if (category.depth !== 2) throw new ConflictRequestError('The depth of category must be 2!');
+    
+        const arr_product_variants = JSON.parse(product_variants);
+        if (arr_product_variants.length === 0) throw new ConflictRequestError('product_variants field cannot be an empty array!');
+    
+        const updatedProduct = await productModel.findByIdAndUpdate(
+            product_id,
+            {
+                name_product,
+                description,
+                images_product: images,
+                category_id,
+                brand_id
+            },
+            { new: true }
+        );
+        if (!updatedProduct) throw new ConflictRequestError('Error updating product!');
+    
+        let updatedProductResponse = selectFilesData({
+            fileds: ['name_product', 'description', 'images_product', 'category_id', 'brand_id', 'is_trending'],
+            object: updatedProduct
+        });
+    
+        let updated_product_variants = [];
+        for (let index = 0; index < arr_product_variants.length; index++) {
+            const variant = arr_product_variants[index];
+            
+            const updatedVariant = await product_variantModel.findOneAndUpdate(
+                { product_id: product_id, size_id: variant.size_id, image_product_color_id: variant.image_product_color_id },
+                {
+                    quantity: variant.quantity,
+                    price: variant.price,
+                    size_id: variant.size_id,
+                    image_product_color_id: variant.image_product_color_id
+                },
+                { new: true, upsert: true }
+            );
+            if (!updatedVariant) throw new ConflictRequestError('Error updating or creating product variant!');
+            
+            updated_product_variants.push(selectFilesData({
+                fileds: ['quantity', 'price', 'product_id', 'size_id', 'image_product_color_id'],
+                object: updatedVariant
+            }));
+        }
+    
+        updatedProductResponse.product_variants = updated_product_variants;
+        return updatedProductResponse;
+    };
+    
+
+    static deleteProduct = async ({ product_id }) => { 
+        if (!mongoose.Types.ObjectId.isValid(product_id)) {
+            throw new NotFoundError("Product ID is not valid");
+        }
+        
+        const deletedProduct = await productModel.findByIdAndUpdate(
+            product_id,
+            { is_delete: true },
+            { new: true }
+        ).lean();
+
+        if (!deletedProduct) throw new NotFoundError(`Product with ID ${product_id} not found`);
+
+        return {
+            message: 'Product deleted successfully',
+            product: deletedProduct
+        };
+    };
     
 }
 
