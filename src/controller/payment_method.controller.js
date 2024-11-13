@@ -9,13 +9,6 @@ class PaymentMethodController {
         }).send(res)
     }
 
-    static paymentPaypal = async (req, res, next) => {
-        new OK({
-            message: 'cc 123',
-            metadata: await PaymentMethodService.payment_paypal()
-        }).send(res)
-    }
-
     static paymentZaloPay = async (req, res, next) => {
         new OK({
             message: 'created link payment zalo pay success!',
@@ -29,7 +22,6 @@ class PaymentMethodController {
             metadata: await PaymentMethodService.paymet_zalopay_callback({ body: req.body })
         }).send(res)
     }
-
 }
 
 module.exports = PaymentMethodController

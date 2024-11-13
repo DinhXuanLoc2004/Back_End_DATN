@@ -2,6 +2,34 @@ const { CREATED, OK } = require('../core/success.response')
 const ShippingAddressService = require('../services/shipping_address.service')
 
 class ShippingAddressController {
+    static get_delivery_fee = async (req, res, next) => {
+        new OK({
+            message: 'Get delivery fee success!',
+            metadata: await ShippingAddressService.get_delivery_fee({ query: req.query })
+        }).send(res)
+    }
+
+    static get_warts = async (req, res, next) => {
+        new OK({
+            message: 'Get wards success!',
+            metadata: await ShippingAddressService.get_wards({ query: req.query })
+        }).send(res)
+    }
+
+    static get_districts = async (req, res, netx) => {
+        new OK({
+            message: 'Get districts success!',
+            metadata: await ShippingAddressService.get_districts({ query: req.query })
+        }).send(res)
+    }
+
+    static get_all_province = async (req, res, next) => {
+        new OK({
+            message: 'Get all province success',
+            metadata: await ShippingAddressService.get_all_province()
+        }).send(res)
+    }
+
     static deleteShippingAddress = async (req, res, next) => {
         new OK({
             message: 'Delete shipping address success!',

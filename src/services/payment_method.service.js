@@ -52,7 +52,7 @@ class PaymentMethodService {
         return orderUpdated
     }
 
-    static async capture_payment({ id_order_paypal, }) {
+    static async capture_payment({ id_order_paypal }) {
         const access_token = await this.get_token_paypal();
 
         const response = await axios({
@@ -69,7 +69,7 @@ class PaymentMethodService {
 
     static get_token_paypal = async () => {
         const response = await axios({
-            url: 'https://api-m.sandbox.paypal.com/v1/oauth2/token',
+            url: `${process.env.BASE_URL_PAYPAL}/v1/oauth2/token`,
             method: 'post',
             data: 'grant_type=client_credentials',
             auth: {
@@ -85,7 +85,7 @@ class PaymentMethodService {
             app_id: process.env.APP_ID_ZALO_PAY,
             key1: process.env.KEY_1_ZALO_PAY,
             key2: process.env.KEY_2_ZALO_PAY,
-            endpoint: "https://sb-openapi.zalopay.vn/v2/create"
+            endpoint: `${process.env.BASE_URL_ZALO_PAY}/v2/create`
         };
         const embed_data = {
             redirecturl: "t-shop-deeplink://app"
@@ -113,7 +113,7 @@ class PaymentMethodService {
         const result = await axios.post(config.endpoint, null, { params: order })
         return result.data
     }
-
+    
     static paymet_zalopay_callback = async ({ body }) => {
         const { data, mac, type } = body
         const config = {
