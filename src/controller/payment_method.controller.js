@@ -2,10 +2,17 @@ const { CREATED, OK } = require("../core/success.response")
 const PaymentMethodService = require("../services/payment_method.service")
 
 class PaymentMethodController {
+    static cancelURLPaypal = async (req, res, next) => {
+        new OK({
+            message: 'Cancel url success!',
+            metadata: await PaymentMethodService.cancel_url_paypal()
+        }).send(res)
+    }
+
     static returnURLPaypal = async (req, res, next) => {
         new OK({
             message: 'Return url success!',
-            metadata: await PaymentMethodService.return_url_paypal({query: req.query})
+            metadata: await PaymentMethodService.return_url_paypal({ query: req.query })
         }).send(res)
     }
 

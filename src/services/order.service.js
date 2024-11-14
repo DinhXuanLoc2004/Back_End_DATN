@@ -7,6 +7,7 @@ const { userModel } = require("../models/user.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
 const { selectMainFilesData, convertVNDToUSD, convertToObjectId } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
+const { redis_client } = require('../configs/config.redis')
 
 class OrderService {
     static getOrdersForUser = async ({ query }) => {
@@ -58,7 +59,7 @@ class OrderService {
 
     static createdOrder = async ({ body }) => {
         const {
-            user_id, full_name, phone, province_id, province_name, district_id, district_name, 
+            user_id, full_name, phone, province_id, province_name, district_id, district_name,
             ward_code, ward_name, specific_address,
             voucher_user_id, type_voucher, value_voucher,
             delivery_fee, leadtime,
@@ -134,16 +135,18 @@ class OrderService {
             })
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
+            await redis_client.setEx(newOrder._id.toString(), 20, 'order_id')
         }
-
+        
         if (payment_method === 'PayPal') {
             const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
             await orderModel.findByIdAndUpdate(newOrder._id, { paypal_id: paypal.id }, { new: true })
             if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
-            const approve = paypal.links.find(link => link.rel === 'approve').href
+                const approve = paypal.links.find(link => link.rel === 'approve').href
             newOrderResponse.approve = approve
             newOrderResponse.id_order_paypal = paypal.id
             newOrderResponse.zp_trans_token = ''
+            await redis_client.setEx(newOrder._id.toString(), 20, 'order_id')
         }
 
         return newOrderResponse

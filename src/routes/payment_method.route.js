@@ -6,5 +6,6 @@ const router = express.Router()
 router.post('/payment_zalo_pay', asyncHandler(PaymentMethodController.paymentZaloPay))
 router.post('/call_back_zalo_pay', asyncHandler(PaymentMethodController.callbackZaloPay))
 router.get('/return_url_paypal', asyncHandler(PaymentMethodController.returnURLPaypal))
+router.get('/cancel_url_paypal', asyncHandler(PaymentMethodController.cancelURLPaypal))
 
 module.exports = router

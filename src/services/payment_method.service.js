@@ -4,6 +4,7 @@ const { selectMainFilesData, createdSignatueMomo } = require("../utils")
 const CryptoJS = require('crypto-js');
 const moment = require('moment');
 const { orderModel } = require("../models/order.model");
+const { redis_client } = require("../configs/config.redis");
 require('dotenv').config()
 
 class PaymentMethodService {
@@ -30,7 +31,7 @@ class PaymentMethodService {
                 ],
                 application_context: {
                     return_url: 'https://backenddatn-production.up.railway.app/v1/api/payment_method/return_url_paypal',
-                    cancel_url: 'https://example.cancel.com'
+                    cancel_url: 'https://backenddatn-production.up.railway.app/v1/api/payment_method/cancel_url_paypal'
                 }
             })
         })
@@ -48,8 +49,13 @@ class PaymentMethodService {
                 { order_status: 'confirming', payment_status: true },
                 { new: true })
             if (!orderUpdated) throw new ConflictRequestError('Conflict upate order!')
+            await redis_client.del(orderUpdated._id.toString())
         }
         return orderUpdated
+    }
+
+    static cancel_url_paypal = async () => {
+        return true
     }
 
     static async capture_payment({ id_order_paypal }) {
@@ -129,6 +135,7 @@ class PaymentMethodService {
             const dataJson = JSON.parse(data, config.key2)
             const order_id = dataJson["app_trans_id"].split('_')[1]
             const orderUpdate = await orderModel.findByIdAndUpdate(order_id, { payment_status: true, order_status: 'confirming' }, { new: true })
+            await redis_client.del(order_id)
             if (!orderUpdate) throw new ConflictRequestError('Error update payment status with callback zalo pay!')
             return {
                 return_code: 1,
@@ -136,6 +143,7 @@ class PaymentMethodService {
             }
         }
     }
+
 }
 
 module.exports = PaymentMethodService

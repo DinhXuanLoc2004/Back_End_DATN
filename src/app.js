@@ -6,6 +6,7 @@ const app = express()
 const morgan = require('morgan')
 const mongoose = require('mongoose')
 const cors = require('cors')
+const { redis_client } = require('./configs/config.redis')
 
 // init middlewares
 app.use(morgan("dev"))
@@ -24,6 +25,8 @@ mongoose.connect(process.env.URL_MONGODB_ATLAS, {
     console.log(`Connected MongoDB Atlas Success with CountConnections`)
 })
     .catch(err => console.log(`Error Connect::`, err))
+
+require('../src/configs/config.redis')
 
 // init routes
 app.use('/', require('./routes/index'))
