@@ -2,6 +2,20 @@ const { CREATED, OK } = require("../core/success.response")
 const OrderService = require("../services/order.service")
 
 class OrderController {
+    static getOrderDetail = async (req, res, next) => {
+        new OK({
+            message: 'Get order detail success!',
+            metadata: await OrderService.getOrderDetail({ query: req.query })
+        }).send(res)
+    }
+
+    static getAllOrder = async (req, res, next) => {
+        new OK({
+            message: 'Get all order success!',
+            metadata: await OrderService.getAllOrder()
+        }).send(res)
+    }
+
     static getOrdersForUser = async (req, res, next) => {
         new OK({
             message: 'Get orders for user success!',

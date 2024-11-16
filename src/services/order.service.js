@@ -2,14 +2,178 @@ const { ConflictRequestError, BadRequestError } = require("../core/error.reponse
 const { cartModel } = require("../models/cart.model")
 const { orderModel } = require("../models/order.model")
 const { product_orderModel, COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
-const { product_variantModel } = require("../models/product_variant.model")
-const { userModel } = require("../models/user.model")
+const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
+const { userModel, COLLECTION_NAME_USER } = require("../models/user.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
 const { selectMainFilesData, convertVNDToUSD, convertToObjectId } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 const { redis_client } = require('../configs/config.redis')
+const { COLLECTION_NAME_PRODUCT } = require("../models/product.model")
+const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
+const { COLLECTION_NAME_COLOR } = require("../models/color.model")
+const { COLLECTION_NAME_SIZE } = require("../models/size.model")
+const { COLLECTION_NAME_CATEGORY } = require("../models/category.model")
+const { COLLECTION_NAME_BRAND } = require("../models/brand.model")
 
 class OrderService {
+    static getOrderDetail = async ({ query }) => {
+        const { _id } = query
+        const _Obid = convertToObjectId(_id)
+        const order = await orderModel.aggregate([
+            {
+                $match: {
+                    _id: _Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'products_order',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_VARIANT,
+                                localField: 'product_variant_id',
+                                foreignField: '_id',
+                                as: 'product_variant',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_SIZE,
+                                            localField: 'size_id',
+                                            foreignField: '_id',
+                                            as: 'size'
+                                        }
+                                    },
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_PRODUCT,
+                                            localField: 'product_id',
+                                            foreignField: '_id',
+                                            as: 'product',
+                                            pipeline: [
+                                                {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_CATEGORY,
+                                                        localField: 'category_id',
+                                                        foreignField: '_id',
+                                                        as: 'category'
+                                                    }
+                                                }, {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_BRAND,
+                                                        localField: 'brand_id',
+                                                        foreignField: '_id',
+                                                        as: 'brand'
+                                                    }
+                                                }, {
+                                                    $addFields: {
+                                                        category: { $arrayElemAt: ['$category', 0] },
+                                                        brand: { $arrayElemAt: ['$brand', 0] }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                                            localField: 'image_product_color_id',
+                                            foreignField: '_id',
+                                            as: 'image_color',
+                                            pipeline: [
+                                                {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_COLOR,
+                                                        localField: 'color_id',
+                                                        foreignField: '_id',
+                                                        as: 'color'
+                                                    }
+                                                }, {
+                                                    $addFields: {
+                                                        color: { $arrayElemAt: ['$color', 0] }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            product: { $arrayElemAt: ['$product', 0] },
+                                            image_color: { $arrayElemAt: ['$image_color', 0] },
+                                            size: { $arrayElemAt: ['$size', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product_variant: { $arrayElemAt: ['$product_variant', 0] }
+                            }
+                        }, {
+                            $project: {
+                                quantity: 1,
+                                price: 1,
+                                discount: 1,
+                                name_product: '$product_variant.product.name_product',
+                                name_category: '$product_variant.product.category.name_category',
+                                name_brand: '$product_variant.product.brand.name_brand',
+                                size: '$product_variant.size.size',
+                                color: '$product_variant.image_color.color.name_color',
+                                thumb_color: '$product_variant.image_color.url'
+                            }
+                        }
+                    ]
+                }
+            }
+        ])
+        return order
+    }
+
+    static getAllOrder = async () => {
+        const orders = await orderModel.aggregate([
+            {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'products_order'
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_USER,
+                    localField: 'user_id',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            }, {
+                $addFields: {
+                    user: { $arrayElemAt: ['$user', 0] }
+                }
+            }, {
+                $project: {
+                    _id: 1,
+                    email: '$user.email',
+                    full_name: 1,
+                    phone: 1,
+                    province_name: 1,
+                    district_name: 1,
+                    ward_name: 1,
+                    specific_address: 1,
+                    delivery_fee: 1,
+                    leadtime: 1,
+                    payment_method: 1,
+                    payment_status: 1,
+                    total_amount: 1,
+                    order_status: 1,
+                    items: { $size: '$products_order' },
+                    quantity: { $sum: '$products_order.quantity' }
+                }
+            }
+        ])
+
+        return orders
+    }
+
     static getOrdersForUser = async ({ query }) => {
         const { user_id, order_status } = query
         const user_Obid = convertToObjectId(user_id)
@@ -137,12 +301,12 @@ class OrderService {
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
             await redis_client.setEx(newOrder._id.toString(), 20, 'order_id')
         }
-        
+
         if (payment_method === 'PayPal') {
             const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
             await orderModel.findByIdAndUpdate(newOrder._id, { paypal_id: paypal.id }, { new: true })
             if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
-                const approve = paypal.links.find(link => link.rel === 'approve').href
+            const approve = paypal.links.find(link => link.rel === 'approve').href
             newOrderResponse.approve = approve
             newOrderResponse.id_order_paypal = paypal.id
             newOrderResponse.zp_trans_token = ''
