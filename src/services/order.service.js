@@ -5,7 +5,7 @@ const { product_orderModel, COLLECTION_NAME_PRODUCT_ORDER } = require("../models
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { userModel, COLLECTION_NAME_USER } = require("../models/user.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
-const { selectMainFilesData, convertVNDToUSD, convertToObjectId } = require("../utils")
+const { selectMainFilesData, convertVNDToUSD, convertToObjectId, unselectFilesData, isTimeExceededUTC, convertTimestampToDate } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 const { redis_client } = require('../configs/config.redis')
 const { COLLECTION_NAME_PRODUCT } = require("../models/product.model")
@@ -14,8 +14,46 @@ const { COLLECTION_NAME_COLOR } = require("../models/color.model")
 const { COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { COLLECTION_NAME_CATEGORY } = require("../models/category.model")
 const { COLLECTION_NAME_BRAND } = require("../models/brand.model")
+const StatusOrderService = require("./status_order.service")
+const NotifycationService = require("./notifycation.service")
+const { COLLECTION_NAME_STATUS_ORDER } = require("../models/status_order.model")
 
 class OrderService {
+    static getUrserIdWithOrderId = async ({ order_id }) => {
+        const order = await orderModel.findById(order_id).lean()
+        const user_id = order.user_id
+        return user_id
+    }
+
+    static cancelOrderPaymentDealine = async ({ order_id }) => {
+        await StatusOrderService.createStatusOrder({ order_id, status: 'Canceled' })
+        const user_id = await this.getUrserIdWithOrderId({ order_id })
+        await NotifycationService.pushNofifySingle({
+            user_id,
+            title: 'Your order has been cancelled!',
+            body: 'Your order has been canceled because the payment deadline has passed!'
+        })
+    }
+
+    static updateStatusOrder = async ({ body }) => {
+        const { order_id, status, province_name, district_name, ward_name, specific_address } = body
+        const statusOrder = await StatusOrderService.createStatusOrder({ order_id, status, province_name, district_name, ward_name, specific_address })
+        const user_id = await this.getUrserIdWithOrderId({ order_id })
+        await NotifycationService.pushNofifySingle({
+            user_id,
+            title: 'Update status order!',
+            body: `Status order: ${status} ${province_name && district_name && ward_name
+                ? `,The order has arrived in ${province_name} province, ${district_name} district` : ''}`
+        })
+        if (status === 'Delivered Successfully') {
+            const order = await orderModel.findById(order_id)
+            if (!order.payment_status) {
+                await orderModel.findByIdAndUpdate(order_id, { payment_status: true })
+            }
+        }
+        return selectMainFilesData(statusOrder._doc)
+    }
+
     static getOrderDetail = async ({ query }) => {
         const { _id } = query
         const _Obid = convertToObjectId(_id)
@@ -124,13 +162,37 @@ class OrderService {
                         }
                     ]
                 }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_STATUS_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'order_status',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 0,
+                                order_id: 0,
+                                updatedAt: 0,
+                                __v: 0
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $project: {
+                    createdAt: 0,
+                    updatedAt: 0,
+                    __v: 0
+                }
             }
         ])
         return order
     }
 
-    static getAllOrder = async () => {
-        const orders = await orderModel.aggregate([
+    static getAllOrder = async ({ query }) => {
+        const { order_status } = query
+        let pipeline = [
             {
                 $lookup: {
                     from: COLLECTION_NAME_PRODUCT_ORDER,
@@ -146,8 +208,23 @@ class OrderService {
                     as: 'user'
                 }
             }, {
+                $lookup: {
+                    from: COLLECTION_NAME_STATUS_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'orders_status',
+                    pipeline: [
+                        {
+                            $sort: {
+                                createdAt: -1
+                            }
+                        }
+                    ]
+                }
+            }, {
                 $addFields: {
-                    user: { $arrayElemAt: ['$user', 0] }
+                    user: { $arrayElemAt: ['$user', 0] },
+                    order_status: { $arrayElemAt: ['$orders_status', 0] }
                 }
             }, {
                 $project: {
@@ -164,13 +241,26 @@ class OrderService {
                     payment_method: 1,
                     payment_status: 1,
                     total_amount: 1,
-                    order_status: 1,
+                    order_status: '$order_status.status',
                     items: { $size: '$products_order' },
-                    quantity: { $sum: '$products_order.quantity' }
+                    quantity: { $sum: '$products_order.quantity' },
+                    createdAt: 1,
+                    order_date: 1
+                }
+            }, {
+                $sort: {
+                    createdAt: -1
                 }
             }
-        ])
-
+        ]
+        if (order_status) {
+            pipeline.push({
+                $match: {
+                    order_status: order_status
+                }
+            })
+        }
+        const orders = await orderModel.aggregate(pipeline)
         return orders
     }
 
@@ -190,13 +280,36 @@ class OrderService {
                     as: 'products_order'
                 }
             }, {
+                $lookup: {
+                    from: COLLECTION_NAME_STATUS_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'orders_status',
+                    pipeline: [
+                        {
+                            $sort: {
+                                createdAt: -1
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    order_status: { $arrayElemAt: ['$orders_status', 0] }
+                }
+            }, {
                 $project: {
                     _id: 1,
                     items: { $size: '$products_order' },
                     quantity: { $sum: '$products_order.quantity' },
                     createdAt: 1,
-                    order_status: 1,
-                    total_amount: 1
+                    order_status: '$order_status.status',
+                    total_amount: 1,
+                    order_date: 1,
+                    leadtime: 1,
+                    delivery_fee: 1,
+                    payment_method: 1,
+                    payment_status: 1
                 }
             }, {
                 $sort: {
@@ -221,6 +334,96 @@ class OrderService {
         return order._id
     }
 
+    static continueOrder = async ({ query, body }) => {
+        const { order_id } = query
+        const { full_name, phone, province_id, province_name, district_id, district_name,
+            ward_code, ward_name, specific_address,
+            voucher_user_id, type_voucher, value_voucher,
+            delivery_fee, leadtime,
+            payment_method,
+            total_amount } = body
+        let orderUpdatedResponse = {}
+
+        const order = await orderModel.findById(order_id).lean()
+        if (voucher_user_id) {
+            if ((order.voucher_user_id != voucher_user_id)) {
+                await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+            }
+            if (order.voucher_user_id && (order.voucher_user_id == voucher_user_id)) {
+                await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
+            }
+        } else {
+            if (order.voucher_user_id) {
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+            }
+        }
+
+        const orderUpdated = await orderModel.findByIdAndUpdate(
+            order_id,
+            {
+                full_name, phone, province_id, province_name, district_id, district_name,
+                ward_code, ward_name, specific_address,
+                voucher_user_id: voucher_user_id || null, type_voucher, value_voucher, payment_method, total_amount
+            }, {
+            new: true
+        }
+        ).lean()
+
+        orderUpdatedResponse = unselectFilesData({ fields: ['updatedAt', 'createdAt', '__v'], object: orderUpdated })
+
+        if (!orderUpdated) throw new ConflictRequestError('Conflict coutinue order!')
+        if (payment_method === 'COD') {
+            await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
+            await orderModel.findByIdAndUpdate(orderUpdated._id, { delivery_fee, leadtime, order_date: new Date() })
+        }
+
+        if (payment_method === 'Zalo Pay') {
+            if (isTimeExceededUTC(order.createdAt)) {
+                let items = []
+                const products_order = await product_orderModel.find({ order_id }).lean()
+                for (const item of products_order) {
+                    items.push({
+                        itemid: item.product_variant_id,
+                        itemname: item.name_product,
+                        itemprice: item.price,
+                        itemquantity: item.quantity
+                    })
+                }
+                const user = await userModel.findById(order.user_id)
+                const now = Date.now()
+                const zalo_pay = await PaymentMethodService.payment_zalopay({
+                    order_id: `${order_id}${now.toString().slice(-5)}`,
+                    total_amount,
+                    phone,
+                    email: user.email,
+                    address: `${specific_address}, ${ward_name}, ${district_name}, ${province_name}`,
+                    items
+                })
+                if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
+                orderUpdatedResponse.zp_trans_token = zalo_pay.zp_trans_token
+            } else {
+                orderUpdatedResponse.zp_trans_token = order.zp_trans_token
+            }
+            await redis_client.setEx(order_id, 30, 'order_id')
+            await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
+        }
+
+        if (payment_method === 'PayPal') {
+            const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
+            if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
+            await orderModel.findByIdAndUpdate(order_id, { paypal_id: paypal.id }, { new: true })
+            const approve = paypal.links.find(link => link.rel === 'approve').href
+            orderUpdatedResponse.approve = approve
+            orderUpdatedResponse.id_order_paypal = paypal.id
+            orderUpdatedResponse.zp_trans_token = ''
+            await redis_client.setEx(order_id, 30, 'orde_id')
+            await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
+        }
+
+        return orderUpdatedResponse
+    }
+
     static createdOrder = async ({ body }) => {
         const {
             user_id, full_name, phone, province_id, province_name, district_id, district_name,
@@ -229,7 +432,6 @@ class OrderService {
             delivery_fee, leadtime,
             payment_method, payment_status,
             total_amount,
-            order_status,
             products_order,
             cart_ids
         } = body
@@ -248,12 +450,9 @@ class OrderService {
             voucher_user_id: voucher_user_id || null,
             type_voucher,
             value_voucher,
-            delivery_fee,
-            leadtime,
             payment_method,
             payment_status,
-            total_amount,
-            order_status: order_status ? order_status : payment_method === 'COD' ? 'confirming' : 'unpaid'
+            total_amount
         })
 
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
@@ -282,6 +481,12 @@ class OrderService {
         await cartModel.deleteMany({ _id: { $in: cart_ids } })
 
         const user = await userModel.findById(user_id).lean()
+        if (payment_method === 'COD') {
+            const date = new Date()
+            await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Confirming' })
+            await orderModel.findByIdAndUpdate(newOrder._id, { delivery_fee, leadtime, order_date: date })
+        }
+
         if (payment_method === 'Zalo Pay') {
             const items = []
             for (const item of arr_products_order) {
@@ -294,23 +499,26 @@ class OrderService {
             }
             const zalo_pay = await PaymentMethodService.payment_zalopay({
                 order_id: newOrder._id,
-                total_amount, address: `${specific_address}, ${ward_commune}, ${district}, ${province_city}`,
+                total_amount, address: `${specific_address}, ${ward_name}, ${district_name}, ${province_name}`,
                 phone, email: user.email, items
             })
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
+            await orderModel.findByIdAndUpdate(newOrder._id, { zp_trans_token: zalo_pay.zp_trans_token })
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
-            await redis_client.setEx(newOrder._id.toString(), 20, 'order_id')
+            await redis_client.setEx(newOrder._id.toString(), 30, 'order_id')
+            await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 
         if (payment_method === 'PayPal') {
             const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
-            await orderModel.findByIdAndUpdate(newOrder._id, { paypal_id: paypal.id }, { new: true })
             if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
+            await orderModel.findByIdAndUpdate(newOrder._id, { paypal_id: paypal.id }, { new: true })
             const approve = paypal.links.find(link => link.rel === 'approve').href
             newOrderResponse.approve = approve
             newOrderResponse.id_order_paypal = paypal.id
             newOrderResponse.zp_trans_token = ''
-            await redis_client.setEx(newOrder._id.toString(), 20, 'order_id')
+            await redis_client.setEx(newOrder._id.toString(), 30, 'order_id')
+            await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 
         return newOrderResponse

@@ -4,6 +4,20 @@ const { Types } = require('mongoose')
 const cloudianry = require('../configs/config.cloudinary')
 const { ConflictRequestError } = require('../core/error.reponse')
 const crypto = require('crypto')
+const DurationsConstants = require('../constants/durations.constants')
+
+const convertTimestampToDate = (time) => {
+    const date = new Date(time * 1000)
+    return date
+}
+
+function isTimeExceededUTC(inputTime) {
+    const currentUTC = new Date();
+    const inputUTC = new Date(inputTime);
+    const timeDifference = currentUTC - inputUTC;
+    const fifteenMinutesInMs = DurationsConstants.DURATION_ZALO_PAY * 1000;
+    return timeDifference > fifteenMinutesInMs;
+}
 
 const createdSignatueMomo = ({ accessKey, secretKey, amount, extraData,
     ipnUrl, orderId, orderInfo, partnerCode,
@@ -100,5 +114,7 @@ module.exports = {
     selectMainFilesData,
     validateHexColor,
     createdSignatueMomo,
-    convertVNDToUSD
+    convertVNDToUSD,
+    isTimeExceededUTC,
+    convertTimestampToDate
 }
