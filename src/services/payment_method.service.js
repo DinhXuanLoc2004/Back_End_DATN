@@ -48,12 +48,18 @@ class PaymentMethodService {
         const status_capture = capture.status
         let orderUpdated
         if (status_capture === 'COMPLETED') {
-            const order = await orderModel.findOne({paypal_id: token}).lean()
-            const delivery = await ShippingAddressService.get_delivery_fee({to_district_id: order.district_id, 
-                to_ward_code: order.ward_code})
+            const order = await orderModel.findOne({ paypal_id: token }).lean()
+            const delivery = await ShippingAddressService.get_delivery_fee({
+                query: {
+                    to_district_id: order.district_id,
+                    to_ward_code: order.ward_code
+                }
+            })
             orderUpdated = await orderModel.findOneAndUpdate({ paypal_id: token },
-                { payment_status: true, delivery_fee: delivery.delivery_fee, 
-                    leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()},
+                {
+                    payment_status: true, delivery_fee: delivery.delivery_fee,
+                    leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
+                },
                 { new: true })
             if (!orderUpdated) throw new ConflictRequestError('Conflict upate order!')
             await redis_client.del(orderUpdated._id.toString())
@@ -143,10 +149,17 @@ class PaymentMethodService {
             const dataJson = JSON.parse(data, config.key2)
             const order_id = dataJson["app_trans_id"].split('_')[1]
             const order = await orderModel.findById(order_id).lean()
-            const delivery = await ShippingAddressService.get_delivery_fee({to_district_id: order.district_id,
-                 to_ward_code: order.ward_code})
-            const orderUpdate = await orderModel.findByIdAndUpdate(order_id, { payment_status: true, 
-                delivery_fee: delivery.delivery_fee, leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date() }, { new: true })
+            const delivery = await ShippingAddressService.get_delivery_fee({
+                query: {
+                    to_district_id: order.district_id,
+                    to_ward_code: order.ward_code
+                }
+            })
+            const orderUpdate = await orderModel.findByIdAndUpdate(order_id, {
+                payment_status: true,
+                delivery_fee: delivery.delivery_fee, 
+                leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
+            }, { new: true })
             await redis_client.del(order_id)
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
             if (!orderUpdate) throw new ConflictRequestError('Error update payment status with callback zalo pay!')
