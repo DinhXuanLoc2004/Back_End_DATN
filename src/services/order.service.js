@@ -4,7 +4,7 @@ const { orderModel } = require("../models/order.model")
 const { product_orderModel, COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { userModel, COLLECTION_NAME_USER } = require("../models/user.model")
-const { voucher_userModel } = require("../models/voucher_user.model")
+const { voucher_userModel, COLLECTION_NAME_VOUCHER_USER } = require("../models/voucher_user.model")
 const { selectMainFilesData, convertVNDToUSD, convertToObjectId, unselectFilesData, isTimeExceededUTC, convertTimestampToDate } = require("../utils")
 const PaymentMethodService = require("./payment_method.service")
 const { redis_client } = require('../configs/config.redis')
@@ -17,8 +17,16 @@ const { COLLECTION_NAME_BRAND } = require("../models/brand.model")
 const StatusOrderService = require("./status_order.service")
 const NotifycationService = require("./notifycation.service")
 const { COLLECTION_NAME_STATUS_ORDER } = require("../models/status_order.model")
+const { COLLECTION_NAME_VOUCHER } = require("../models/voucher.model")
+const DurationsConstants = require("../constants/durations.constants")
 
 class OrderService {
+    static findOrderIdByZpTransToken = async ({ query }) => {
+        const { zp_trans_token } = query
+        const order = await orderModel.findOne({ zp_trans_token }).lean()
+        return order._id
+    }
+
     static getUrserIdWithOrderId = async ({ order_id }) => {
         const order = await orderModel.findById(order_id).lean()
         const user_id = order.user_id
@@ -334,6 +342,193 @@ class OrderService {
         return order._id
     }
 
+    static getProductsContinueOrder = async ({ query }) => {
+        const { order_id } = query
+        const order_Obid = convertToObjectId(order_id)
+        const order = await orderModel.aggregate([
+            {
+                $match: {
+                    _id: order_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'products_order',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_VARIANT,
+                                localField: 'product_variant_id',
+                                foreignField: '_id',
+                                as: 'product_variant',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_SIZE,
+                                            localField: 'size_id',
+                                            foreignField: '_id',
+                                            as: 'size'
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                                            localField: 'image_product_color_id',
+                                            foreignField: '_id',
+                                            as: 'image_color',
+                                            pipeline: [
+                                                {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_COLOR,
+                                                        localField: 'color_id',
+                                                        foreignField: '_id',
+                                                        as: 'color'
+                                                    }
+                                                }, {
+                                                    $addFields: {
+                                                        color: { $arrayElemAt: ['$color', 0] }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_PRODUCT,
+                                            localField: 'product_id',
+                                            foreignField: '_id',
+                                            as: 'product',
+                                            pipeline: [
+                                                {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_BRAND,
+                                                        localField: 'brand_id',
+                                                        foreignField: '_id',
+                                                        as: 'brand'
+                                                    }
+                                                }, {
+                                                    $lookup: {
+                                                        from: COLLECTION_NAME_CATEGORY,
+                                                        localField: 'category_id',
+                                                        foreignField: '_id',
+                                                        as: 'category'
+                                                    }
+                                                }, {
+                                                    $addFields: {
+                                                        brand: { $arrayElemAt: ['$brand', 0] },
+                                                        category: { $arrayElemAt: ['$category', 0] }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            size: { $arrayElemAt: ['$size', 0] },
+                                            image_color: { $arrayElemAt: ['$image_color', 0] },
+                                            product: { $arrayElemAt: ['$product', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product_variant: { $arrayElemAt: ['$product_variant', 0] }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                product_variant_id: 1,
+                                quantity: 1,
+                                price: 1,
+                                thumb: '$product_variant.image_color.url',
+                                size: '$product_variant.size.size',
+                                name_color: '$product_variant.image_color.color.name_color',
+                                hex_color: '$product_variant.image_color.color.hex_color',
+                                name_product: '$product_variant.product.name_product',
+                                name_category: '$product_variant.product.category.name_category',
+                                name_brand: '$product_variant.product.brand.name_brand',
+                                total_discount: '$discount',
+                                product_id: '$product_variant.product._id'
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_VOUCHER_USER,
+                    localField: 'voucher_user_id',
+                    foreignField: '_id',
+                    as: 'voucher_detail',
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $ne: ['$voucher_user_id', null] }
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_VOUCHER,
+                                localField: 'voucher_id',
+                                foreignField: '_id',
+                                as: 'voucher'
+                            }
+                        }, {
+                            $addFields: {
+                                voucher: { $arrayElemAt: ['$voucher', 0] }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                is_used: 1,
+                                voucher_name: '$voucher.voucher_name',
+                                voucher_type: '$voucher.voucher_type',
+                                voucher_value: '$voucher.voucher_value',
+                                voucher_code: '$voucher.voucher_code',
+                                voucher_thumb: '$voucher.image_voucher.url',
+                                time_start: '$voucher.time_start',
+                                time_end: '$voucher.time_end',
+                                min_order_value: '$voucher.min_order_value',
+                                is_active: '$voucher.is_active',
+                                quantity: '$voucher.quantity',
+                                voucher_id: '$voucher._id'
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    voucher_detail: {
+                        $cond: {
+                            if: { $gt: [{ $size: '$voucher_detail' }, 0] },
+                            then: { $arrayElemAt: ['$voucher_detail', 0] },
+                            else: null
+                        }
+                    }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    full_name: 1,
+                    phone: 1,
+                    province_id: 1,
+                    province_name: 1,
+                    district_id: 1,
+                    district_name: 1,
+                    ward_code: 1,
+                    ward_name: 1,
+                    specific_address: 1,
+                    voucher_user_id: 1,
+                    type_voucher: 1,
+                    value_voucher: 1,
+                    payment_method: 1,
+                    products_order: 1,
+                    voucher_detail: 1
+                }
+            }
+        ])
+        return order[0]
+    }
+
     static continueOrder = async ({ query, body }) => {
         const { order_id } = query
         const { full_name, phone, province_id, province_name, district_id, district_name,
@@ -345,19 +540,6 @@ class OrderService {
         let orderUpdatedResponse = {}
 
         const order = await orderModel.findById(order_id).lean()
-        if (voucher_user_id) {
-            if ((order.voucher_user_id != voucher_user_id)) {
-                await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
-                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
-            }
-            if (order.voucher_user_id && (order.voucher_user_id == voucher_user_id)) {
-                await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
-            }
-        } else {
-            if (order.voucher_user_id) {
-                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
-            }
-        }
 
         const orderUpdated = await orderModel.findByIdAndUpdate(
             order_id,
@@ -376,6 +558,19 @@ class OrderService {
         if (payment_method === 'COD') {
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
             await orderModel.findByIdAndUpdate(orderUpdated._id, { delivery_fee, leadtime, order_date: new Date() })
+            if (voucher_user_id) {
+                if ((order.voucher_user_id != voucher_user_id)) {
+                    await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+                if (order.voucher_user_id && (order.voucher_user_id == voucher_user_id)) {
+                    await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
+                }
+            } else {
+                if (order.voucher_user_id) {
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+            }
         }
 
         if (payment_method === 'Zalo Pay') {
@@ -405,8 +600,17 @@ class OrderService {
             } else {
                 orderUpdatedResponse.zp_trans_token = order.zp_trans_token
             }
-            await redis_client.setEx(order_id, 30, 'order_id')
+            await redis_client.setEx(order_id, DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
             await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
+            if (voucher_user_id) {
+                if ((order.voucher_user_id != voucher_user_id)) {
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+            } else {
+                if (order.voucher_user_id) {
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+            }
         }
 
         if (payment_method === 'PayPal') {
@@ -417,8 +621,17 @@ class OrderService {
             orderUpdatedResponse.approve = approve
             orderUpdatedResponse.id_order_paypal = paypal.id
             orderUpdatedResponse.zp_trans_token = ''
-            await redis_client.setEx(order_id, 30, 'orde_id')
+            await redis_client.setEx(order_id, DurationsConstants.DURATION_DEALINE_PAYMENT, 'orde_id')
             await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
+            if (voucher_user_id) {
+                if ((order.voucher_user_id != voucher_user_id)) {
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+            } else {
+                if (order.voucher_user_id) {
+                    await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+                }
+            }
         }
 
         return orderUpdatedResponse
@@ -457,8 +670,6 @@ class OrderService {
 
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
 
-        if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
-
         let newOrderResponse = {}
         newOrderResponse = selectMainFilesData(newOrder._doc)
 
@@ -485,6 +696,7 @@ class OrderService {
             const date = new Date()
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Confirming' })
             await orderModel.findByIdAndUpdate(newOrder._id, { delivery_fee, leadtime, order_date: date })
+            if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
         }
 
         if (payment_method === 'Zalo Pay') {
@@ -505,7 +717,7 @@ class OrderService {
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
             await orderModel.findByIdAndUpdate(newOrder._id, { zp_trans_token: zalo_pay.zp_trans_token })
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
-            await redis_client.setEx(newOrder._id.toString(), 30, 'order_id')
+            await redis_client.setEx(newOrder._id.toString(), DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 
@@ -517,7 +729,7 @@ class OrderService {
             newOrderResponse.approve = approve
             newOrderResponse.id_order_paypal = paypal.id
             newOrderResponse.zp_trans_token = ''
-            await redis_client.setEx(newOrder._id.toString(), 30, 'order_id')
+            await redis_client.setEx(newOrder._id.toString(), DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 

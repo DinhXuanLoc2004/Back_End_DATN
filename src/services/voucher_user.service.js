@@ -12,8 +12,7 @@ class VoucherUserService {
         let pipeline = [
             {
                 $match: {
-                    user_id: user_Obid,
-                    is_used: is_used_boolean
+                    user_id: user_Obid
                 }
             }, {
                 $lookup: {
@@ -59,6 +58,13 @@ class VoucherUserService {
                 }
             }
         ]
+        if(is_used !== 'all'){
+            pipeline.push({
+                $match: {
+                    is_used: is_used_boolean
+                }
+            })
+        }
         if (min_order_value) {
             const number_min_order_value = Number.parseInt(min_order_value)
             pipeline.push({

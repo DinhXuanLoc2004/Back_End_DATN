@@ -2,6 +2,27 @@ const { CREATED, OK } = require("../core/success.response")
 const OrderService = require("../services/order.service")
 
 class OrderController {
+    static findOrderIdByZpTransToken = async (req, res, next) => {
+        new OK({
+            message: 'Find order_id by zp_trans_token success!',
+            metadata: await OrderService.findOrderIdByZpTransToken({ query: req.query })
+        }).send(res)
+    }
+
+    static findOrderIdByPaypalId = async (req, res, next) => {
+        new OK({
+            message: 'Find order_id by paypal_id success!',
+            metadata: await OrderService.findOrderIdByPaypalId({ query: req.query })
+        }).send(res)
+    }
+
+    static getProductsContinueOrder = async (req, res, next) => {
+        new OK({
+            message: 'Get products continue order',
+            metadata: await OrderService.getProductsContinueOrder({ query: req.query })
+        }).send(res)
+    }
+
     static continueOrder = async (req, res, next) => {
         new OK({
             message: 'Continue order success!',
@@ -26,7 +47,7 @@ class OrderController {
     static getAllOrder = async (req, res, next) => {
         new OK({
             message: 'Get all order success!',
-            metadata: await OrderService.getAllOrder({query: req.query})
+            metadata: await OrderService.getAllOrder({ query: req.query })
         }).send(res)
     }
 

@@ -8,6 +8,7 @@ const { redis_client } = require("../configs/config.redis");
 const StatusOrderService = require("./status_order.service");
 const DurationsConstants = require("../constants/durations.constants");
 const ShippingAddressService = require("./shipping_address.service");
+const { voucher_userModel } = require("../models/voucher_user.model");
 require('dotenv').config()
 
 class PaymentMethodService {
@@ -55,6 +56,9 @@ class PaymentMethodService {
                     to_ward_code: order.ward_code
                 }
             })
+            if(order.voucher_user_id) {
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, {is_used: true})
+            }
             orderUpdated = await orderModel.findOneAndUpdate({ paypal_id: token },
                 {
                     payment_status: true, delivery_fee: delivery.delivery_fee,
@@ -160,6 +164,9 @@ class PaymentMethodService {
                 delivery_fee: delivery.delivery_fee, 
                 leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
             }, { new: true })
+            if(order.voucher_user_id) {
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, {is_used: true})
+            }
             await redis_client.del(order_id)
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
             if (!orderUpdate) throw new ConflictRequestError('Error update payment status with callback zalo pay!')
@@ -169,7 +176,6 @@ class PaymentMethodService {
             }
         }
     }
-
 }
 
 module.exports = PaymentMethodService
