@@ -35,6 +35,11 @@ class OrderService {
 
     static cancelOrderPaymentDealine = async ({ order_id }) => {
         await StatusOrderService.createStatusOrder({ order_id, status: 'Canceled' })
+        const order = await orderModel.findById(order_id).lean()
+        if (order.voucher_user_id) {
+            await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+        }
+        await orderModel.findByIdAndUpdate(order_id, { leadtime: null, delivery_fee: null })
         const user_id = await this.getUrserIdWithOrderId({ order_id })
         await NotifycationService.pushNofifySingle({
             user_id,
@@ -557,19 +562,25 @@ class OrderService {
         if (!orderUpdated) throw new ConflictRequestError('Conflict coutinue order!')
         if (payment_method === 'COD') {
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
-            await orderModel.findByIdAndUpdate(orderUpdated._id, { delivery_fee, leadtime, order_date: new Date() })
+            await orderModel.findByIdAndUpdate(orderUpdated._id, {
+                delivery_fee, leadtime, order_date: new Date(),
+                zp_trans_token: '', paypal_id: ''
+            })
             if (voucher_user_id) {
                 if ((order.voucher_user_id != voucher_user_id)) {
                     await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
                     await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
                 }
-                if (order.voucher_user_id && (order.voucher_user_id == voucher_user_id)) {
+                if (order.voucher_user_id == voucher_user_id) {
                     await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
                 }
             } else {
                 if (order.voucher_user_id) {
                     await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
                 }
+            }
+            if (order.payment_method === 'Zalo Pay' || order.payment_method === 'PayPal') {
+                await redis_client.del(order_id)
             }
         }
 
@@ -596,6 +607,7 @@ class OrderService {
                     items
                 })
                 if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
+                await orderModel.findByIdAndUpdate(order_id, { zp_trans_token: zalo_pay.zp_trans_token, paypal_id: '' })
                 orderUpdatedResponse.zp_trans_token = zalo_pay.zp_trans_token
             } else {
                 orderUpdatedResponse.zp_trans_token = order.zp_trans_token
@@ -616,7 +628,7 @@ class OrderService {
         if (payment_method === 'PayPal') {
             const paypal = await PaymentMethodService.payment_paypal({ amount: convertVNDToUSD(total_amount) })
             if (!paypal) throw new ConflictRequestError('Error create payment paypal!')
-            await orderModel.findByIdAndUpdate(order_id, { paypal_id: paypal.id }, { new: true })
+            await orderModel.findByIdAndUpdate(order_id, { paypal_id: paypal.id, zp_trans_token: '' }, { new: true })
             const approve = paypal.links.find(link => link.rel === 'approve').href
             orderUpdatedResponse.approve = approve
             orderUpdatedResponse.id_order_paypal = paypal.id

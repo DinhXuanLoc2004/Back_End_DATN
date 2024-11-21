@@ -62,7 +62,9 @@ class PaymentMethodService {
             orderUpdated = await orderModel.findOneAndUpdate({ paypal_id: token },
                 {
                     payment_status: true, delivery_fee: delivery.delivery_fee,
-                    leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
+                    leadtime: convertTimestampToDate(delivery.leadtime), 
+                    order_date: new Date(),
+                    capture_id: capture.id
                 },
                 { new: true })
             if (!orderUpdated) throw new ConflictRequestError('Conflict upate order!')
