@@ -221,7 +221,7 @@ class PaymentMethodService {
                 delivery_fee: delivery.delivery_fee,
                 leadtime: convertTimestampToDate(delivery.leadtime), 
                 order_date: new Date(),
-                zp_trans_id: `${dataJson["zptransid"]}`
+                zp_trans_id: `${dataJson["zp_trans_id"]}`
             }, { new: true })
             if (order.voucher_user_id) {
                 await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: true })
