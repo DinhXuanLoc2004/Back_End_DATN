@@ -43,9 +43,28 @@ class PaymentMethodService {
         return response.data
     }
 
+    static refund_paypal = async ({ query }) => {
+        const { order_id } = query
+        const order = await orderModel.findById(order_id).lean()
+        const capture_id = order.capture_id
+        console.log(capture_id);
+        const access_token = await this.get_token_paypal()
+        const response = await axios.post(
+            `${process.env.BASE_URL_PAYPAL}/v2/payments/captures/${capture_id}/refund`, null, {
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                "Content-Type": 'application/json'
+            }
+        }
+        )
+        console.log(response.data);
+        return response.data
+    }
+
     static return_url_paypal = async ({ query }) => {
         const { token, PayerID } = query
         const capture = await this.capture_payment({ id_order_paypal: token })
+        console.log(capture);
         const status_capture = capture.status
         let orderUpdated
         if (status_capture === 'COMPLETED') {
@@ -56,15 +75,15 @@ class PaymentMethodService {
                     to_ward_code: order.ward_code
                 }
             })
-            if(order.voucher_user_id) {
-                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, {is_used: true})
+            if (order.voucher_user_id) {
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: true })
             }
             orderUpdated = await orderModel.findOneAndUpdate({ paypal_id: token },
                 {
                     payment_status: true, delivery_fee: delivery.delivery_fee,
-                    leadtime: convertTimestampToDate(delivery.leadtime), 
+                    leadtime: convertTimestampToDate(delivery.leadtime),
                     order_date: new Date(),
-                    capture_id: capture.id
+                    capture_id: capture.purchase_units[0].payments.captures[0].id
                 },
                 { new: true })
             if (!orderUpdated) throw new ConflictRequestError('Conflict upate order!')
@@ -163,11 +182,11 @@ class PaymentMethodService {
             })
             const orderUpdate = await orderModel.findByIdAndUpdate(order_id, {
                 payment_status: true,
-                delivery_fee: delivery.delivery_fee, 
+                delivery_fee: delivery.delivery_fee,
                 leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
             }, { new: true })
-            if(order.voucher_user_id) {
-                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, {is_used: true})
+            if (order.voucher_user_id) {
+                await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: true })
             }
             await redis_client.del(order_id)
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })

@@ -9,6 +9,13 @@ class PaymentMethodController {
         }).send(res)
     }
 
+    static refundPayPal = async (req, res, next) => {
+        new OK({
+            message: 'Refund paypal success!',
+            metadata: await PaymentMethodService.refund_paypal({ query: req.query })
+        }).send(res)
+    }
+
     static returnURLPaypal = async (req, res, next) => {
         new OK({
             message: 'Return url success!',
