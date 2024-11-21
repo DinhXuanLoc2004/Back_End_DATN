@@ -26,8 +26,9 @@ const orderSchema = new mongoose.Schema({
     payment_status: { type: Boolean, require: true, default: false },
     total_amount: { type: Number, require: true },
     paypal_id: { type: String, default: '' },
-    capture_id: {type: String, default: ''},
+    capture_id: { type: String, default: '' },
     zp_trans_token: { type: String, default: '' },
+    zp_trans_id: { type: String, default: '' },
     order_date: { type: Date, default: null }
 }, {
     timestamps: true,

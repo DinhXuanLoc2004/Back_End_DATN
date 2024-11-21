@@ -125,6 +125,41 @@ class PaymentMethodService {
         return response.data.access_token
     }
 
+    static refund_zalopay = async ({ query }) => {
+        const {order_id} = query
+        const order = await orderModel.findById(order_id).lean()
+        const zp_trans_id = order.zp_trans_id
+        const total_amount = order.total_amount
+        const config = {
+            appid: process.env.APP_ID_ZALO_PAY,
+            key1: process.env.KEY_1_ZALO_PAY,
+            key2: process.env.KEY_2_ZALO_PAY,
+            endpoint: "https://sandbox.zalopay.com.vn/v001/tpe/partialrefund"
+        };
+
+        const timestamp = Date.now();
+        const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
+
+        let params = {
+            appid: config.appid,
+            mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
+            timestamp, // miliseconds
+            zptransid: zp_trans_id,
+            amount: total_amount,
+            description: 'ZaloPay Refund Demo',
+        };
+
+        // appid|zptransid|amount|description|timestamp
+        let data = params.appid + "|" + params.zptransid + "|" + params.amount + "|" + params.description + "|" + params.timestamp;
+        params.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+
+        const response = await axios.post(config.endpoint, null, { params })
+
+        console.log(response);
+
+        return response.data
+    }
+
     static payment_zalopay = async ({ order_id, total_amount, phone, email, address, items }) => {
         console.log(`${moment().format('YYMMDD')}_${order_id}`.length);
         const config = {
@@ -183,7 +218,9 @@ class PaymentMethodService {
             const orderUpdate = await orderModel.findByIdAndUpdate(order_id, {
                 payment_status: true,
                 delivery_fee: delivery.delivery_fee,
-                leadtime: convertTimestampToDate(delivery.leadtime), order_date: new Date()
+                leadtime: convertTimestampToDate(delivery.leadtime), 
+                order_date: new Date(),
+                zp_trans_id: data.zptransid
             }, { new: true })
             if (order.voucher_user_id) {
                 await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: true })

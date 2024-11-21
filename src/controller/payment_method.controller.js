@@ -23,6 +23,13 @@ class PaymentMethodController {
         }).send(res)
     }
 
+    static refundZaloPay = async (req, res, next) => {
+        new OK({
+            message: 'Refund paypal success!',
+            metadata: await PaymentMethodService.refund_zalopay({ query: req.query })
+        }).send(res)
+    }
+
     static paymentZaloPay = async (req, res, next) => {
         new OK({
             message: 'created link payment zalo pay success!',

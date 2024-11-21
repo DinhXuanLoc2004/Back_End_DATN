@@ -8,5 +8,6 @@ router.post('/call_back_zalo_pay', asyncHandler(PaymentMethodController.callback
 router.get('/return_url_paypal', asyncHandler(PaymentMethodController.returnURLPaypal))
 router.get('/cancel_url_paypal', asyncHandler(PaymentMethodController.cancelURLPaypal))
 router.get('/refund_paypal', asyncHandler(PaymentMethodController.refundPayPal))
+router.get('/refund_zalo_pay', asyncHandler(PaymentMethodController.refundZaloPay))
 
 module.exports = router
