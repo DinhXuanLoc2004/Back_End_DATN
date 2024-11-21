@@ -196,6 +196,7 @@ class PaymentMethodService {
 
     static paymet_zalopay_callback = async ({ body }) => {
         const { data, mac, type } = body
+        console.log('body callback zalopay:: ', body);
         const config = {
             key2: process.env.KEY_2_ZALO_PAY
         }
@@ -220,7 +221,7 @@ class PaymentMethodService {
                 delivery_fee: delivery.delivery_fee,
                 leadtime: convertTimestampToDate(delivery.leadtime), 
                 order_date: new Date(),
-                zp_trans_id: data.zptransid
+                zp_trans_id: `${data.zptransid}`
             }, { new: true })
             if (order.voucher_user_id) {
                 await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: true })
