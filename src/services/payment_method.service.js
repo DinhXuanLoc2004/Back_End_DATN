@@ -146,7 +146,7 @@ class PaymentMethodService {
             timestamp, // miliseconds
             zptransid: zp_trans_id,
             amount: total_amount,
-            description: 'ZaloPay Refund Demo',
+            description: 'T Shop Refund',
         };
 
         // appid|zptransid|amount|description|timestamp

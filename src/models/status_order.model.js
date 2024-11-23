@@ -15,7 +15,8 @@ const status_orderSchema = new mongosee.Schema({
     province_name: { type: String, default: "" },
     district_name: { type: String, default: "" },
     ward_name: { type: String, default: "" },
-    specific_address: {type: String, default: ""}
+    specific_address: { type: String, default: "" },
+    cancellation_reason: { type: String, default: "" }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_STATUS_ORDER

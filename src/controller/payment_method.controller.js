@@ -9,24 +9,10 @@ class PaymentMethodController {
         }).send(res)
     }
 
-    static refundPayPal = async (req, res, next) => {
-        new OK({
-            message: 'Refund paypal success!',
-            metadata: await PaymentMethodService.refund_paypal({ query: req.query })
-        }).send(res)
-    }
-
     static returnURLPaypal = async (req, res, next) => {
         new OK({
             message: 'Return url success!',
             metadata: await PaymentMethodService.return_url_paypal({ query: req.query })
-        }).send(res)
-    }
-
-    static refundZaloPay = async (req, res, next) => {
-        new OK({
-            message: 'Refund paypal success!',
-            metadata: await PaymentMethodService.refund_zalopay({ query: req.query })
         }).send(res)
     }
 

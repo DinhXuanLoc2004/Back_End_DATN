@@ -2,6 +2,20 @@ const { CREATED, OK } = require("../core/success.response")
 const OrderService = require("../services/order.service")
 
 class OrderController {
+    static getReviewForOrder = async (req, res, next) => {
+        new OK({
+            message: 'Get product reviewed success!',
+            metadata: await OrderService.getReviewForOrder({ query: req.query })
+        }).send(res)
+    }
+
+    static cancelOrder = async (req, res, next) => {
+        new OK({
+            message: 'Cancel order success!',
+            metadata: await OrderService.cancelOrder({ query: req.query, body: req.body })
+        }).send(res)
+    }
+
     static findOrderIdByZpTransToken = async (req, res, next) => {
         new OK({
             message: 'Find order_id by zp_trans_token success!',

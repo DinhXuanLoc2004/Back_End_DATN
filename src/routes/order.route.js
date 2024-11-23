@@ -13,5 +13,7 @@ router.put('/continue_order', asyncHandler(OrderController.continueOrder))
 router.get('/find_orderid_by_paypalid', asyncHandler(OrderController.findOrderIdByPaypalId))
 router.get('/find_orderid_by_zptranstoken', asyncHandler(OrderController.findOrderIdByZpTransToken))
 router.get('/get_products_continue_order', asyncHandler(OrderController.getProductsContinueOrder))
+router.post('/cancel_order', asyncHandler(OrderController.cancelOrder))
+router.get('/get_reviews_for_order', asyncHandler(OrderController.getReviewForOrder))
 
 module.exports = router
