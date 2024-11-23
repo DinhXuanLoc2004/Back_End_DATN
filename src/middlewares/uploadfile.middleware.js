@@ -20,8 +20,8 @@ const deleteImageMiddleware = asyncHandler(async (req, res, next) => {
 })
 
 const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
-    const images = req.file
-    if (!images) next()
+    const image = req.file
+    if (!image) next()
     if (!pattern.test(image.originalname)) throw new ConflictRequestError('Invalid file!')
     const data = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream((err, uploadResult) => {
@@ -30,7 +30,7 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
             return resolve({ public_id, url })
         }).end(image.buffer)
     })
-    req.body.images = data
+    req.body.image = data
     next()
 })
 
