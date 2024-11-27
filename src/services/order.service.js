@@ -19,8 +19,166 @@ const NotifycationService = require("./notifycation.service")
 const { COLLECTION_NAME_STATUS_ORDER } = require("../models/status_order.model")
 const { COLLECTION_NAME_VOUCHER } = require("../models/voucher.model")
 const DurationsConstants = require("../constants/durations.constants")
+const { query } = require("express")
+const { COLLECTION_NAME_REVIEW } = require("../models/review.model")
 
 class OrderService {
+    static getReviewForOrder = async ({ query }) => {
+        const { order_id } = query
+        const order_Obid = convertToObjectId(order_id)
+        const products = await product_orderModel.aggregate([
+            {
+                $match: {
+                    order_id: order_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_VARIANT,
+                    localField: 'product_variant_id',
+                    foreignField: '_id',
+                    as: 'product_variant',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT,
+                                localField: 'product_id',
+                                foreignField: '_id',
+                                as: 'product',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_CATEGORY,
+                                            localField: 'category_id',
+                                            foreignField: '_id',
+                                            as: 'category'
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_BRAND,
+                                            localField: 'brand_id',
+                                            foreignField: '_id',
+                                            as: 'brand'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            category: { $arrayElemAt: ['$category', 0] },
+                                            brand: { $arrayElemAt: ['$brand', 0] },
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_SIZE,
+                                localField: 'size_id',
+                                foreignField: '_id',
+                                as: 'size'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                                localField: 'image_product_color_id',
+                                foreignField: '_id',
+                                as: 'image_color',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_COLOR,
+                                            localField: 'color_id',
+                                            foreignField: '_id',
+                                            as: 'color'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            color: { $arrayElemAt: ['$color', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product: { $arrayElemAt: ['$product', 0] },
+                                size: { $arrayElemAt: ['$size', 0] },
+                                image_color: { $arrayElemAt: ['$image_color', 0] },
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_REVIEW,
+                    localField: '_id',
+                    foreignField: 'product_order_id',
+                    as: 'review'
+                }
+            }, {
+                $addFields: {
+                    is_reviewed: {
+                        $cond: {
+                            if: { $gt: [{ $size: '$review' }, 0] },
+                            then: true,
+                            else: false
+                        }
+                    },
+                    product_variant: { $arrayElemAt: ['$product_variant', 0] },
+                    review_id: {
+                        $cond: {
+                            if: { $gt: [{ $size: '$review' }, 0] },
+                            then: { $arrayElemAt: ['$review._id', 0] },
+                            else: ''
+                        }
+                    }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    product_order_id: '$_id',
+                    quantity: 1,
+                    price: 1,
+                    discount: 1,
+                    name_product: '$product_variant.product.name_product',
+                    name_category: '$product_variant.product.category.name_category',
+                    name_brand: '$product_variant.product.brand.name_brand',
+                    thumb: '$product_variant.image_color.url',
+                    name_color: '$product_variant.image_color.color.name_color',
+                    size: '$product_variant.size.size',
+                    product_id: '$product_variant.product._id',
+                    is_reviewed: 1,
+                    review_id: 1
+                }
+            }
+        ])
+        return products
+    }
+
+    static removeVoucherForOrder = async ({ order_id }) => {
+        await orderModel.findByIdAndUpdate(order_id, { voucher_user_id: null, type_voucher: '', value_voucher: 0 })
+    }
+
+    static cancelOrder = async ({ query, body }) => {
+        const { order_id } = query
+        const { cancellation_reason } = body
+        const order = await orderModel.findById(order_id).lean()
+        let body_notification = 'Your order has been cancelled!'
+        if (order.payment_status) {
+            if (order.payment_method === 'Zalo Pay') {
+                body_notification = 'Your order has been canceled, the amount will be refunded later!'
+                await PaymentMethodService.refund_zalopay({ query: { order_id } })
+            }
+            if (order.payment_method === 'PayPal') {
+                body_notification = 'Your order has been canceled, the amount will be refunded later!'
+                await PaymentMethodService.refund_paypal({ query: { order_id } })
+            }
+        }
+        await NotifycationService.pushNofifySingle({ user_id: order.user_id, title: 'Canceled order success!', body: body_notification })
+        await StatusOrderService.createStatusOrder({ order_id, status: 'Canceled', cancellation_reason })
+        if (order.voucher_user_id) {
+            await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
+            await this.removeVoucherForOrder({ order_id })
+        }
+        return true
+    }
+
     static findOrderIdByZpTransToken = async ({ query }) => {
         const { zp_trans_token } = query
         const order = await orderModel.findOne({ zp_trans_token }).lean()
@@ -39,7 +197,7 @@ class OrderService {
         if (order.voucher_user_id) {
             await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
         }
-        await orderModel.findByIdAndUpdate(order_id, { leadtime: null, delivery_fee: null })
+        await orderModel.findByIdAndUpdate(order_id, { leadtime: null, delivery_fee: null, order_date: null })
         const user_id = await this.getUrserIdWithOrderId({ order_id })
         await NotifycationService.pushNofifySingle({
             user_id,
@@ -551,7 +709,9 @@ class OrderService {
             {
                 full_name, phone, province_id, province_name, district_id, district_name,
                 ward_code, ward_name, specific_address,
-                voucher_user_id: voucher_user_id || null, type_voucher, value_voucher, payment_method, total_amount
+                voucher_user_id: voucher_user_id || null, type_voucher, value_voucher,
+                payment_method, total_amount,
+                payment_status: false
             }, {
             new: true
         }
