@@ -5,6 +5,8 @@ const { asyncHandler } = require('../utils')
 const { ConflictRequestError } = require('../core/error.reponse')
 
 const pattern = /^.*\.(jpg|jpeg|png|gif|bmp|tiff|WEBP)$/i
+const pattern_media = /^.*\.(jpg|jpeg|png|gif|bmp|tiff|webp|mp4|avi|mov|mkv|wmv|flv|webm)$/i;
+
 
 const deleteImageMiddleware = asyncHandler(async (req, res, next) => {
     const public_id = req.body.image.public_id
@@ -36,17 +38,20 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
 
 const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
     if (!req.files || !Array.isArray(req.files)) {
-        next()
+        return next()
     }
 
+    console.log(req.files);
     const images = req.files.reduce((files, file) => {
-        if (pattern.test(file.originalname)) {
+        if (pattern_media.test(file.originalname)) {
+            const resource_type = pattern.test(file.originalname) ? 'image' : 'video'
             const asyncImage = new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream((err, uploadResult) => {
-                    if (err) reject(err)
-                    const { public_id, url } = uploadResult
-                    return resolve({ public_id, url })
-                }).end(file.buffer)
+                cloudinary.uploader.upload_stream({ resource_type: resource_type },
+                    (err, uploadResult) => {
+                        if (err) reject(err)
+                        const { public_id, url } = uploadResult
+                        return resolve({ public_id, url, type: resource_type})
+                    }).end(file.buffer)
             })
             files.push(asyncImage)
         }
@@ -55,7 +60,7 @@ const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
 
     const data = await Promise.all(images)
     req.body.images = data
-    next()
+    return next()
 })
 
 module.exports = {

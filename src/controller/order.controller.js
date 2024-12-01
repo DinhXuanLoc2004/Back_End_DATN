@@ -2,6 +2,13 @@ const { CREATED, OK } = require("../core/success.response")
 const OrderService = require("../services/order.service")
 
 class OrderController {
+    static getProductDetailOrder = async (req, res, next) => {
+        new OK({
+            message: 'Get product detail order success!',
+            metadata: await OrderService.getProductDetailOrder({ query: req.query })
+        }).send(res)
+    }
+
     static getReviewForOrder = async (req, res, next) => {
         new OK({
             message: 'Get product reviewed success!',

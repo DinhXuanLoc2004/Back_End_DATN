@@ -15,5 +15,6 @@ router.get('/find_orderid_by_zptranstoken', asyncHandler(OrderController.findOrd
 router.get('/get_products_continue_order', asyncHandler(OrderController.getProductsContinueOrder))
 router.post('/cancel_order', asyncHandler(OrderController.cancelOrder))
 router.get('/get_reviews_for_order', asyncHandler(OrderController.getReviewForOrder))
+router.get('/get_product_detail_order', asyncHandler(OrderController.getProductDetailOrder))
 
 module.exports = router

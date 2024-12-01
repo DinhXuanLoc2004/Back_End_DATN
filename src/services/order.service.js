@@ -1,6 +1,6 @@
 const { ConflictRequestError, BadRequestError } = require("../core/error.reponse")
 const { cartModel } = require("../models/cart.model")
-const { orderModel } = require("../models/order.model")
+const { orderModel, COLLECTION_NAME_ORDER } = require("../models/order.model")
 const { product_orderModel, COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { userModel, COLLECTION_NAME_USER } = require("../models/user.model")
@@ -23,6 +23,119 @@ const { query } = require("express")
 const { COLLECTION_NAME_REVIEW } = require("../models/review.model")
 
 class OrderService {
+    static getProductDetailOrder = async ({ query }) => {
+        const { product_order_id } = query
+        const product_order_Obid = convertToObjectId(product_order_id)
+        const productDetail = await product_orderModel.aggregate([
+            {
+                $match: {
+                    _id: product_order_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_ORDER,
+                    localField: 'order_id',
+                    foreignField: '_id',
+                    as: 'order'
+                },
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_VARIANT,
+                    localField: 'product_variant_id',
+                    foreignField: '_id',
+                    as: 'product_variant',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT,
+                                localField: 'product_id',
+                                foreignField: '_id',
+                                as: 'product',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_CATEGORY,
+                                            localField: 'category_id',
+                                            foreignField: '_id',
+                                            as: 'category'
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_BRAND,
+                                            localField: 'brand_id',
+                                            foreignField: '_id',
+                                            as: 'brand'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            category: { $arrayElemAt: ['$category', 0] },
+                                            brand: { $arrayElemAt: ['$brand', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_SIZE,
+                                localField: 'size_id',
+                                foreignField: '_id',
+                                as: 'size'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                                localField: 'image_product_color_id',
+                                foreignField: '_id',
+                                as: 'image_color',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_COLOR,
+                                            localField: 'color_id',
+                                            foreignField: '_id',
+                                            as: 'color'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            color: { $arrayElemAt: ['$color', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product: { $arrayElemAt: ['$product', 0] },
+                                size: { $arrayElemAt: ['$size', 0] },
+                                image_color: { $arrayElemAt: ['$image_color', 0] }
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    product_variant: { $arrayElemAt: ['$product_variant', 0] },
+                    order: { $arrayElemAt: ['$order', 0] }
+                }
+            }, {
+                $project: {
+                    _id: 0,
+                    product_order_id: '$_id',
+                    thumb: '$product_variant.image_color.url',
+                    name_product: '$product_variant.product.name_product',
+                    name_category: '$product_variant.product.category.name_category',
+                    name_brand: '$product_variant.product.brand.name_brand',
+                    size: '$product_variant.size.size',
+                    name_color: '$product_variant.image_color.color.name_color',
+                    price: 1,
+                    product_id: '$product_variant.product._id',
+                    order_id: '$order._id'
+                }
+            }
+        ])
+
+        return productDetail[0]
+    }
+
     static getReviewForOrder = async ({ query }) => {
         const { order_id } = query
         const order_Obid = convertToObjectId(order_id)
@@ -187,12 +300,14 @@ class OrderService {
 
     static getUrserIdWithOrderId = async ({ order_id }) => {
         const order = await orderModel.findById(order_id).lean()
+        console.log(order);
         const user_id = order.user_id
         return user_id
     }
 
     static cancelOrderPaymentDealine = async ({ order_id }) => {
-        await StatusOrderService.createStatusOrder({ order_id, status: 'Canceled' })
+        console.log(1);
+        await StatusOrderService.createStatusOrder({ order_id, status: 'Canceled', cancellation_reason: 'Payment is past due' })
         const order = await orderModel.findById(order_id).lean()
         if (order.voucher_user_id) {
             await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
@@ -208,6 +323,7 @@ class OrderService {
 
     static updateStatusOrder = async ({ body }) => {
         const { order_id, status, province_name, district_name, ward_name, specific_address } = body
+        console.log(body);
         const statusOrder = await StatusOrderService.createStatusOrder({ order_id, status, province_name, district_name, ward_name, specific_address })
         const user_id = await this.getUrserIdWithOrderId({ order_id })
         await NotifycationService.pushNofifySingle({
@@ -226,12 +342,19 @@ class OrderService {
     }
 
     static getOrderDetail = async ({ query }) => {
-        const { _id } = query
-        const _Obid = convertToObjectId(_id)
+        const { order_id } = query
+        const _Obid = convertToObjectId(order_id)
         const order = await orderModel.aggregate([
             {
                 $match: {
                     _id: _Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_USER,
+                    localField: 'user_id',
+                    foreignField: '_id',
+                    as: 'user',
                 }
             }, {
                 $lookup: {
@@ -320,6 +443,8 @@ class OrderService {
                             }
                         }, {
                             $project: {
+                                _id: 0,
+                                product_id: '$product_variant.product_id',
                                 quantity: 1,
                                 price: 1,
                                 discount: 1,
@@ -347,18 +472,76 @@ class OrderService {
                                 updatedAt: 0,
                                 __v: 0
                             }
+                        }, {
+                            $sort: {
+                                createdAt: -1
+                            }
                         }
                     ]
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_VOUCHER_USER,
+                    localField: 'voucher_user_id',
+                    foreignField: '_id',
+                    as: 'voucher_used',
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $ne: ['$voucher_user_id', null] }
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_VOUCHER,
+                                localField: 'voucher_id',
+                                foreignField: '_id',
+                                as: 'voucher',
+                                pipeline: [
+                                    {
+                                        $project: {
+                                            _id: 0,
+                                            voucher_name: 1,
+                                            voucher_code: 1,
+                                            thumb_voucher: '$image_voucher.url'
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                voucher: { $arrayElemAt: ['$voucher', 0] }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                voucher_id: 1,
+                                voucher_name: '$voucher.voucher_name',
+                                voucher_code: '$voucher.voucher_code',
+                                thumb_voucher: '$voucher.thumb_voucher'
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    current_status: { $arrayElemAt: ['$order_status.status', 0] },
+                    email: { $arrayElemAt: ['$user.email', 0] },
+                    voucher_used: { $arrayElemAt: ['$voucher_used', 0] }
                 }
             }, {
                 $project: {
                     createdAt: 0,
                     updatedAt: 0,
-                    __v: 0
+                    __v: 0,
+                    paypal_id: 0,
+                    capture_id: 0,
+                    zp_trans_token: 0,
+                    zp_trans_id: 0,
+                    user: 0
                 }
             }
         ])
-        return order
+        return order[0]
     }
 
     static getAllOrder = async ({ query }) => {
@@ -413,10 +596,14 @@ class OrderService {
                     payment_status: 1,
                     total_amount: 1,
                     order_status: '$order_status.status',
+                    cancellation_reason: '$order_status.cancellation_reason',
                     items: { $size: '$products_order' },
                     quantity: { $sum: '$products_order.quantity' },
                     createdAt: 1,
-                    order_date: 1
+                    order_date: 1,
+                    status_date: '$order_status.createdAt',
+                    province: '$order_status.province',
+                    district: '$order_status.district'
                 }
             }, {
                 $sort: {
@@ -475,12 +662,16 @@ class OrderService {
                     quantity: { $sum: '$products_order.quantity' },
                     createdAt: 1,
                     order_status: '$order_status.status',
+                    cancellation_reason: '$order_status.cancellation_reason',
                     total_amount: 1,
                     order_date: 1,
                     leadtime: 1,
                     delivery_fee: 1,
                     payment_method: 1,
-                    payment_status: 1
+                    payment_status: 1,
+                    status_date: '$order_status.createdAt',
+                    province: '$order_status.province',
+                    district: '$order_status.district'
                 }
             }, {
                 $sort: {

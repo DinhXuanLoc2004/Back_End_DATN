@@ -14,6 +14,7 @@ async function handleResdis() {
     await redis_client.sendCommand(['CONFIG', 'SET', 'notify-keyspace-events', 'Ex']);
 
     await redis_subscriber.pSubscribe("__keyevent@0__:expired", async (message) => {
+        console.log(message);
         asyncHandler(await OrderService.cancelOrderPaymentDealine({order_id: message}))
     });
 }

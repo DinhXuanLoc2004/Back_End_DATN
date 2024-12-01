@@ -11,6 +11,7 @@ class ReviewService {
             user_id,
             product_order_id
         })
+        console.log(newReview);
         if (!newReview) throw new ConflictRequestError('Error create review')
         return newReview
     }
