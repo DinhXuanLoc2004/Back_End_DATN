@@ -20,7 +20,7 @@ const orderSchema = new mongoose.Schema({
     voucher_user_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_VOUCHER_USER, default: null },
     type_voucher: { type: String },
     value_voucher: { type: Number },
-    delivery_fee: { type: Number, default: null },
+    delivery_fee: { type: Number, default: 0 },
     leadtime: { type: Date, default: null },
     payment_method: { type: String, enum: ['COD', 'Zalo Pay', 'PayPal'] },
     payment_status: { type: Boolean, require: true, default: false },
