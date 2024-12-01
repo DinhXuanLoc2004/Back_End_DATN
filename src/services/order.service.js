@@ -902,7 +902,7 @@ class OrderService {
                 ward_code, ward_name, specific_address,
                 voucher_user_id: voucher_user_id || null, type_voucher, value_voucher,
                 payment_method, total_amount,
-                payment_status: false
+                payment_status: false, delivery_fee
             }, {
             new: true
         }
@@ -914,7 +914,7 @@ class OrderService {
         if (payment_method === 'COD') {
             await StatusOrderService.createStatusOrder({ order_id, status: 'Confirming' })
             await orderModel.findByIdAndUpdate(orderUpdated._id, {
-                delivery_fee, leadtime, order_date: new Date(),
+                leadtime, order_date: new Date(),
                 zp_trans_token: '', paypal_id: ''
             })
             if (voucher_user_id) {
@@ -1028,7 +1028,8 @@ class OrderService {
             value_voucher,
             payment_method,
             payment_status,
-            total_amount
+            total_amount,
+            delivery_fee
         })
 
         if (!newOrder) throw new ConflictRequestError('Conflict creaed new order!')
@@ -1058,7 +1059,7 @@ class OrderService {
         if (payment_method === 'COD') {
             const date = new Date()
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Confirming' })
-            await orderModel.findByIdAndUpdate(newOrder._id, { delivery_fee, leadtime, order_date: date })
+            await orderModel.findByIdAndUpdate(newOrder._id, { leadtime, order_date: date })
             if (voucher_user_id) await voucher_userModel.findByIdAndUpdate(voucher_user_id, { is_used: true })
         }
 
