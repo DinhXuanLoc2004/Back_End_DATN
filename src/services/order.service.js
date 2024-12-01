@@ -312,7 +312,7 @@ class OrderService {
         if (order.voucher_user_id) {
             await voucher_userModel.findByIdAndUpdate(order.voucher_user_id, { is_used: false })
         }
-        await orderModel.findByIdAndUpdate(order_id, { leadtime: null, delivery_fee: null, order_date: null })
+        await orderModel.findByIdAndUpdate(order_id, { leadtime: null, order_date: null })
         const user_id = await this.getUrserIdWithOrderId({ order_id })
         await NotifycationService.pushNofifySingle({
             user_id,
