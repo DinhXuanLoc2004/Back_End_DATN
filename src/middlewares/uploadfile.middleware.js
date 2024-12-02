@@ -23,7 +23,7 @@ const deleteImageMiddleware = asyncHandler(async (req, res, next) => {
 
 const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
     const image = req.file
-    if (!image) next()
+    if (!image) return next()
     if (!pattern.test(image.originalname)) throw new ConflictRequestError('Invalid file!')
     const data = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream((err, uploadResult) => {
@@ -43,17 +43,21 @@ const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
 
     console.log(req.files);
     const images = req.files.reduce((files, file) => {
-        if (pattern_media.test(file.originalname)) {
-            const resource_type = pattern.test(file.originalname) ? 'image' : 'video'
-            const asyncImage = new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream({ resource_type: resource_type },
-                    (err, uploadResult) => {
-                        if (err) reject(err)
-                        const { public_id, url } = uploadResult
-                        return resolve({ public_id, url, type: resource_type})
-                    }).end(file.buffer)
-            })
-            files.push(asyncImage)
+        if (file.url && file.public_id && file.type) {
+            files.push(Promise.resolve(file))
+        } else {
+            if (pattern_media.test(file.originalname)) {
+                const resource_type = pattern.test(file.originalname) ? 'image' : 'video'
+                const asyncImage = new Promise((resolve, reject) => {
+                    cloudinary.uploader.upload_stream({ resource_type: resource_type },
+                        (err, uploadResult) => {
+                            if (err) reject(err)
+                            const { public_id, url } = uploadResult
+                            return resolve({ public_id, url, type: resource_type })
+                        }).end(file.buffer)
+                })
+                files.push(asyncImage)
+            }
         }
         return files
     }, [])

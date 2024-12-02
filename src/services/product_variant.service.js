@@ -3,7 +3,6 @@ const { COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { selectFilesData, convertToObjectId } = require("../utils")
 
 class ProductVariantService {
-
     static findColorImageProductVariant = async ({ query }) => {
         const { product_id } = query
         const product_Obid = convertToObjectId(product_id)
