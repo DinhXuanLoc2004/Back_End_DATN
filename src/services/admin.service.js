@@ -19,11 +19,11 @@ class AdminService {
     }
 
     static loginAdmin = async ({ body }) => {
-        const { email, passsword } = body
+        const { email, password } = body
         const hoderAdmin = await adminModel.findOne({ email }).lean()
         if (!hoderAdmin) throw new AuthFailureError('email is incorrect')
         const comparePassword = await compareData({
-            data: passsword,
+            data: password,
             hashData: hoderAdmin.password
         })
         if (!comparePassword) throw new AuthFailureError('Password is not match!')
@@ -32,12 +32,12 @@ class AdminService {
     }
 
     static createAdmin = async ({ body }) => {
-        const { email, passsword, role, create_by_id } = body
+        const { email, password, role, create_by_id } = body
         const adminParent = await adminModel.findById(create_by_id).lean()
         if (adminParent.role !== 'Owner') throw new BadRequestError('Insufficient permissions to create!')
         const adminHoder = await adminModel.findOne({ email }).lean()
         if (adminHoder) throw new BadRequestError('Email already exists!')
-        const hashedPassword = await hashData(passsword)
+        const hashedPassword = await hashData(password)
         const newAdmin = await adminModel.create({
             email,
             password: hashedPassword,
