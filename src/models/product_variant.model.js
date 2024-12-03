@@ -12,7 +12,8 @@ const product_variantSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     product_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT, required: true },
     size_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_SIZE, required: true },
-    image_product_color_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_IMAGE_PRODUCT_COLOR, required: true }
+    image_product_color_id: { type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_IMAGE_PRODUCT_COLOR, required: true },
+    is_delete: { type: Boolean, default: false }
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_PRODUCT_VARIANT

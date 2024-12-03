@@ -12,7 +12,7 @@ class BrandService {
         };
     };
 
-    static toggleDeleteBrand = async (query) => {
+    static toggleDeleteBrand = async ({query}) => {
         const { _id } = query
         const brand = await brandModel.findById(_id).lean()
         const deletedBrand = await brandModel.findByIdAndUpdate(_id, { is_delete: !brand.is_delete }, { new: true })

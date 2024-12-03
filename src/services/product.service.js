@@ -14,9 +14,247 @@ const { COLLECTION_NAME_USER } = require("../models/user.model")
 const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
 const { size } = require("lodash")
 const { COLLECTION_NAME_PRODUCT_SALE } = require("../models/product_sale.model")
+const { COLLECTION_NAME_CART } = require("../models/cart.model")
+const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
+    static updateProduct = async ({ query, body }) => {
+        const { _id } = query
+        const { name_product, description, images, category_id, brand_id, product_variants } = body
+        await this.checkParamsProduct({ body })
+        const productUpdated = await productModel.findByIdAndUpdate(_id,
+            { name_product, description, images_product: images, category_id, brand_id },
+            { new: true })
+        let response = productUpdated
+        const arr_product_variants = this.checkParamProductVariants({ product_variants })
+        let arr_product_variants_update = []
+        for (let index = 0; index < arr_product_variants.length; index++) {
+            const element = arr_product_variants[index];
+            const updated_product_variant = await product_variantModel.findByIdAndUpdate(element.product_variant_id ?? '',
+                {
+                    price: element.price,
+                    quantity: element.quantity,
+                    size_id: element.size_id,
+                    image_product_color_id: element.image_product_color_id,
+                    is_delete: element.is_delete
+                },
+                { upsert: true, new: true },
+            )
+            if(!updated_product_variant) throw new ConflictRequestError('Error conlifct update product variant!')
+            arr_product_variants_update.push(updated_product_variant)
+        }
+        response.arr_product_variants_update = arr_product_variants_update
+        return response
+    }
+
+    static getDetailProductUpdate = async ({ query }) => {
+        const { _id, is_delete_variant } = query
+        const _Obid = convertToObjectId(_id)
+        const condition_is_delete_variant = is_delete_variant === 'true' ? true : false
+        let product = await productModel.aggregate([
+            {
+                $match: {
+                    _id: _Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_BRAND,
+                    localField: 'brand_id',
+                    foreignField: '_id',
+                    as: 'brand',
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_CATEGORY,
+                    localField: 'category_id',
+                    foreignField: '_id',
+                    as: 'category',
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_VARIANT,
+                    localField: '_id',
+                    foreignField: 'product_id',
+                    as: 'product_variants',
+                    pipeline: [
+                        {
+                            $match: {
+                                is_delete: condition_is_delete_variant
+                            }
+                        },{
+                            $lookup: {
+                                from: COLLECTION_NAME_SIZE,
+                                localField: 'size_id',
+                                foreignField: '_id',
+                                as: 'size'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                                localField: 'image_product_color_id',
+                                foreignField: '_id',
+                                as: 'image_color',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_COLOR,
+                                            localField: 'color_id',
+                                            foreignField: '_id',
+                                            as: 'color'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            color: { $arrayElemAt: ['$color', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_CART,
+                                localField: '_id',
+                                foreignField: 'product_variant_id',
+                                as: 'carts'
+                            }
+                        }, {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_ORDER,
+                                localField: '_id',
+                                foreignField: 'product_variant_id',
+                                as: 'product_orders'
+                            }
+                        }, {
+                            $addFields: {
+                                size: { $arrayElemAt: ['$size', 0] },
+                                image_color: { $arrayElemAt: ['$image_color', 0] },
+                                can_be_delete: {
+                                    $cond: {
+                                        if: {
+                                            $or: [
+                                                { $gt: [{ $size: '$carts' }, 0] },
+                                                { $gt: [{ $size: '$product_orders' }, 0] }
+                                            ]
+                                        },
+                                        then: false,
+                                        else: true
+                                    }
+                                }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                product_variant_id: '$_id',
+                                size_id: 1,
+                                image_product_color_id: 1,
+                                size: '$size.size',
+                                thumb_product_variant: '$image_color.url',
+                                name_color: '$image_color.color.name_color',
+                                price: 1,
+                                quantity: 1,
+                                can_be_delete: 1,
+                                is_delete: 1
+                            }
+                        }
+                    ]
+                }
+            }, {
+                $addFields: {
+                    brand: { $arrayElemAt: ['$brand', 0] },
+                    category: { $arrayElemAt: ['$category', 0] },
+                }
+            }, {
+                $project: {
+                    _id: 1,
+                    name_product: 1,
+                    description: 1,
+                    images_product: 1,
+                    category_id: 1,
+                    name_category: '$category.name_category',
+                    brand_id: 1,
+                    name_brand: '$brand.name_brand',
+                    product_variants: 1
+                }
+            }
+        ])
+        const images_colors = await product_variantModel.aggregate([
+            {
+                $match: {
+                    product_id: _Obid,
+                    is_delete: condition_is_delete_variant
+                }
+            }, {
+                $unwind: '$image_product_color_id'
+            }, {
+                $group: {
+                    _id: null,
+                    image_product_color_id: { $addToSet: '$image_product_color_id' }
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_IMAGE_PRODUCT_COLOR,
+                    localField: 'image_product_color_id',
+                    foreignField: '_id',
+                    as: 'image_colors',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_COLOR,
+                                localField: 'color_id',
+                                foreignField: '_id',
+                                as: 'color'
+                            }
+                        }, {
+                            $addFields: {
+                                color: { $arrayElemAt: ['$color', 0] }
+                            }
+                        }, {
+                            $project: {
+                                _id: 0,
+                                image_product_color_id: '$_id',
+                                thumb_color: '$url',
+                                name_color: '$color.name_color'
+                            }
+                        }
+                    ]
+                }
+            },
+        ])
+        const sizes = await product_variantModel.aggregate([
+            {
+                $match: {
+                    product_id: _Obid,
+                    is_delete: condition_is_delete_variant
+                }
+            }, {
+                $unwind: '$size_id'
+            }, {
+                $group: {
+                    _id: null,
+                    size_id: { $addToSet: '$size_id' }
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_SIZE,
+                    localField: 'size_id',
+                    foreignField: '_id',
+                    as: 'sizes',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 0,
+                                size_id: '$_id',
+                                name_size: '$size'
+                            }
+                        }
+                    ]
+                }
+            },
+        ])
+        product[0].images_colors = images_colors[0].image_colors
+        product[0].sizes = sizes[0].sizes
+        return product[0]
+    }
 
     static getColorSizeToProduct = async ({ query }) => {
         const { product_id } = query;
@@ -239,7 +477,7 @@ class ProductService {
                     'sales_active.name_sale': 1,
                     'sales_active.discount': 1,
                     'sales_active.time_end': 1,
-                    'sales_active.image_sale': {$arrayElemAt: ['$sales_active.image_sale.url', 0]},
+                    'sales_active.image_sale': { $arrayElemAt: ['$sales_active.image_sale.url', 0] },
                     'sales_active._id': 1
                 }
             }
@@ -539,14 +777,24 @@ class ProductService {
         }
     }
 
-    static addProduct = async ({ body }) => {
-        const { name_product, description, images, category_id, brand_id, product_variants } = body;
+    static checkParamsProduct = async ({ body }) => {
+        const { name_product, description, images, category_id, brand_id, product_variants } = body
         if (!name_product || !description || !images || !category_id || !brand_id || !product_variants)
             throw new ConflictRequestError('Please provide full information!')
         const category = await categoryModel.findById(category_id).lean()
         if (category.depth !== 2) throw new ConflictRequestError('The depth of category must be 2!')
+    }
+
+    static checkParamProductVariants = ({ product_variants }) => {
         const arr_product_variants = JSON.parse(product_variants)
         if (arr_product_variants.length === 0) throw new ConflictRequestError('product_variants field cannot be an empty array!')
+        return arr_product_variants
+    }
+
+    static addProduct = async ({ body }) => {
+        const { name_product, description, images, category_id, brand_id, product_variants } = body;
+        await this.checkParamsProduct({ body })
+        const arr_product_variants = this.checkParamProductVariants({ product_variants })
         const newProduct = await productModel.create({
             name_product,
             description,
@@ -557,7 +805,7 @@ class ProductService {
         if (!newProduct) throw new ConflictRequestError('Error add new product!')
         let newProductResponse = selectFilesData({
             fileds: ['name_product',
-                'description', 'image_product', 'category_id', 'brand_id', 'is_trending'], object: newProduct
+                'description', 'image_product', 'category_id', 'brand_id', 'is_trending', '_id'], object: newProduct
         })
         let new_product_variants = [];
         for (let index = 0; index < arr_product_variants.length; index++) {
