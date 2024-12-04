@@ -16,15 +16,30 @@ const { size } = require("lodash")
 const { COLLECTION_NAME_PRODUCT_SALE } = require("../models/product_sale.model")
 const { COLLECTION_NAME_CART } = require("../models/cart.model")
 const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
+const { pipeline } = require("nodemailer/lib/xoauth2")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
+    static togglePublicProduct = async ({ query }) => {
+        const { _id } = query
+        const product = await productModel.findById(_id).lean()
+        const togglePublicProduct = await productModel.findByIdAndUpdate(_id, { is_public: !product.is_public }, { new: true })
+        return togglePublicProduct
+    }
+
+    static toggleDeleteProduct = async ({ query }) => {
+        const { _id } = query
+        const product = await productModel.findById(_id).lean()
+        const deleteProduct = await productModel.findByIdAndUpdate(_id, { is_delete: !product.is_delete }, { new: true })
+        return deleteProduct
+    }
+
     static updateProduct = async ({ query, body }) => {
         const { _id } = query
-        const { name_product, description, images, category_id, brand_id, product_variants } = body
+        const { name_product, description, images, category_id, brand_id, product_variants, is_public } = body
         await this.checkParamsProduct({ body })
         const productUpdated = await productModel.findByIdAndUpdate(_id,
-            { name_product, description, images_product: images, category_id, brand_id },
+            { name_product, description, images_product: images, category_id, brand_id, is_public },
             { new: true })
         let response = productUpdated
         const arr_product_variants = this.checkParamProductVariants({ product_variants })
@@ -41,7 +56,7 @@ class ProductService {
                 },
                 { upsert: true, new: true },
             )
-            if(!updated_product_variant) throw new ConflictRequestError('Error conlifct update product variant!')
+            if (!updated_product_variant) throw new ConflictRequestError('Error conlifct update product variant!')
             arr_product_variants_update.push(updated_product_variant)
         }
         response.arr_product_variants_update = arr_product_variants_update
@@ -82,7 +97,7 @@ class ProductService {
                             $match: {
                                 is_delete: condition_is_delete_variant
                             }
-                        },{
+                        }, {
                             $lookup: {
                                 from: COLLECTION_NAME_SIZE,
                                 localField: 'size_id',
@@ -486,9 +501,14 @@ class ProductService {
         return product[0]
     }
 
-    static getAllProducts = async ({ user_id, products_id, category_id, sort, price, colors_id, sizes_id, rating, brands_id }) => {
+    static getAllProducts = async ({ query, body }) => {
+        const { user_id, category_id, sort, is_delete, is_public, page, page_size } = query
+        const { price, colors_id, sizes_id, rating, brands_id } = body
+        const condition_is_delete = is_delete === 'true' ? true : false
+        const condition_is_public = is_public === 'true' ? true : false
         const date = new Date()
         let parent_id
+
         if (category_id && ObjectId.isValid(category_id)) {
             const category = await categoryModel.findById(category_id).lean()
             const depth_category = category.depth
@@ -520,6 +540,14 @@ class ProductService {
             }
         }
 
+        if (is_delete) {
+            matchCondition.is_delete = condition_is_delete
+        }
+
+        if (is_public) {
+            matchCondition.is_public = condition_is_public
+        }
+
         const pipeline = [
             {
                 $match: matchCondition
@@ -528,7 +556,14 @@ class ProductService {
                     from: COLLECTION_NAME_PRODUCT_SALE,
                     localField: '_id',
                     foreignField: 'product_id',
-                    as: 'product_sale'
+                    as: 'product_sale',
+                    pipeline: [
+                        {
+                            $match: {
+                                is_active: true
+                            }
+                        }
+                    ]
                 }
             },
             {
@@ -714,6 +749,7 @@ class ProductService {
         if (rating) {
             matchFilter.averageRating = { $gte: rating }
         }
+
         pipeline.push({
             $match: matchFilter
         }, {
@@ -722,6 +758,17 @@ class ProductService {
                 sizes: 0
             }
         })
+
+        if (page && page_size) {
+            const skip = (Math.max(1, parseInt(page)) - 1) * Math.max(1, parseInt(page_size));
+            const limit = Math.max(1, parseInt(page_size));
+
+            pipeline.push(
+                { $skip: skip },
+                { $limit: limit }
+            );
+        }
+
         if (sort) {
             const [key, value] = sort.split(':').map(str => str.trim())
             const sortObj = {
@@ -731,11 +778,26 @@ class ProductService {
                 $sort: sortObj
             });
         }
+
         const products = await productModel.aggregate(pipeline)
+
         if (!products) throw new NotFoundError(`Error get all products`)
-        return {
-            products
+
+        let totalProducts = 0
+        let totalPages = 0
+        if (page && page_size) {
+            totalProducts = await productModel.aggregate([...pipeline.slice(0, -2), { $count: "total" }])
+            totalPages = Math.ceil(totalProducts[0]?.total / page_size)
         }
+
+        const response = page && page_size ? {
+            products,
+            total_products: totalProducts[0]?.total || 0,
+            total_pages: totalPages,
+            current_page: page
+        } : { products }
+
+        return response
     }
 
     static getDataFilter = async () => {
@@ -778,8 +840,8 @@ class ProductService {
     }
 
     static checkParamsProduct = async ({ body }) => {
-        const { name_product, description, images, category_id, brand_id, product_variants } = body
-        if (!name_product || !description || !images || !category_id || !brand_id || !product_variants)
+        const { name_product, description, images, category_id, brand_id, product_variants, is_public } = body
+        if (!name_product || !description || !images || !category_id || !brand_id || !product_variants || !is_public)
             throw new ConflictRequestError('Please provide full information!')
         const category = await categoryModel.findById(category_id).lean()
         if (category.depth !== 2) throw new ConflictRequestError('The depth of category must be 2!')
@@ -792,7 +854,7 @@ class ProductService {
     }
 
     static addProduct = async ({ body }) => {
-        const { name_product, description, images, category_id, brand_id, product_variants } = body;
+        const { name_product, description, images, category_id, brand_id, product_variants, is_public } = body;
         await this.checkParamsProduct({ body })
         const arr_product_variants = this.checkParamProductVariants({ product_variants })
         const newProduct = await productModel.create({
@@ -800,7 +862,8 @@ class ProductService {
             description,
             images_product: images,
             category_id,
-            brand_id
+            brand_id,
+            is_public
         })
         if (!newProduct) throw new ConflictRequestError('Error add new product!')
         let newProductResponse = selectFilesData({
@@ -823,7 +886,6 @@ class ProductService {
         newProductResponse.product_variants = new_product_variants
         return newProductResponse
     }
-
 }
 
 module.exports = ProductService

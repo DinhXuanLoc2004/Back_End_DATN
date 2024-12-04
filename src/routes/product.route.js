@@ -12,5 +12,7 @@ router.get('/get_detail_product/', asyncHandler(ProductController.getProductDeta
 router.get('/get_colors_sizes_to_product', asyncHandler(ProductController.getColorSizeToProduct))
 router.get('/get_product_detail_update', asyncHandler(ProductController.getDetailProductUpdate))
 router.post('/update_product', upload.array(['images']), uploadImageMiddleware, asyncHandler(ProductController.updateProduct))
+router.delete('/toggle_delete_product', asyncHandler(ProductController.toggleDeleteProduct))
+router.put('/toggle_public_product', asyncHandler(ProductController.togglePublicProduct))
 
 module.exports = router

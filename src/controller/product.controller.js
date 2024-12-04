@@ -2,6 +2,20 @@ const { CREATED, OK } = require("../core/success.response")
 const ProductService = require("../services/product.service")
 
 class ProductController {
+    static togglePublicProduct = async (req, res, next) => {
+        new OK({
+            message: 'Toggle public product success!',
+            metadata: await ProductService.togglePublicProduct({ query: req.query })
+        }).send(res)
+    }
+
+    static toggleDeleteProduct = async (req, res, next) => {
+        new OK({
+            message: 'Toggle delete product success!',
+            metadata: await ProductService.toggleDeleteProduct({ query: req.query })
+        }).send(res)
+    }
+
     static updateProduct = async (req, res, next) => {
         new OK({
             message: 'Update product success!',
@@ -30,19 +44,18 @@ class ProductController {
             metadata: await ProductService.getProductDetail({ product_id, user_id })
         }).send(res)
     }
-    
+
     static getDataFilter = async (req, res, next) => {
         new OK({
             message: 'Get data filter success!',
             metadata: await ProductService.getDataFilter()
         }).send(res)
     }
+
     static getAllProducts = async (req, res, next) => {
-        const { user_id, category_id, sort } = req.query
-        const { price, colors_id, sizes_id, rating, brands_id } = req.body
         new OK({
             message: 'Get all products success!',
-            metadata: await ProductService.getAllProducts({ user_id, category_id, sort, price, colors_id, sizes_id, rating, brands_id })
+            metadata: await ProductService.getAllProducts({ query: req.query, body: req.body })
         }).send(res)
     }
 

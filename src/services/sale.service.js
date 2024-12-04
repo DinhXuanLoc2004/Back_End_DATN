@@ -17,7 +17,8 @@ class SaleService {
         let pipeline = [
             {
                 $match: {
-                    sale_id: sale_Obid
+                    sale_id: sale_Obid,
+                    is_active: true
                 }
             }, {
                 $lookup: {
@@ -348,38 +349,6 @@ class SaleService {
     static addSale = async ({ body }) => {
         const { discount, time_start, time_end, product_ids, image, name_sale } = body
         const arr_product_ids = JSON.parse(product_ids)
-        const product_Obids = arr_product_ids.map(product_id => convertToObjectId(product_id))
-        const discountProducts = await productModel.aggregate([
-            {
-                $match: {
-                    _id: { $in: product_Obids }
-                }
-            }, {
-                $lookup: {
-                    from: COLLECTION_NAME_PRODUCT_SALE,
-                    localField: '_id',
-                    foreignField: 'product_id',
-                    as: 'product_sale'
-                }
-            }, {
-                $lookup: {
-                    from: COLLECTION_NAME_SALE,
-                    localField: 'product_sale.sale_id',
-                    foreignField: '_id',
-                    as: 'sale'
-                }
-            }, {
-                $project: {
-                    _id: 0,
-                    sum_discount: { $sum: '$sale.discount' }
-                }
-            }
-        ])
-        discountProducts.filter(item => {
-            if (discount > (100 - item.sum_discount)) {
-                throw new ConflictRequestError('Discount is greater than the remaining discount percentage!')
-            }
-        })
         validateTime(time_start, time_end)
         const newSale = await saleModel.create({
             discount,
@@ -391,6 +360,7 @@ class SaleService {
         if (!newSale) throw new ConflictRequestError('Error created new sale!')
         let listNewProductSales = []
         for (const product_id of arr_product_ids) {
+            await product_saleModel.findOneAndUpdate({ product_id }, { is_active: false }, { new: true })
             const newProductSale = await product_saleModel.create({
                 product_id,
                 sale_id: newSale._id

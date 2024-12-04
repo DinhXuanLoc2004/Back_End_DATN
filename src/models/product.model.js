@@ -15,6 +15,8 @@ const productSchema = new mongoose.Schema({
     images_product: { type: Array, default: [] },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
     brand_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_BRAND },
+    is_delete: {type: Boolean, default: false},
+    is_public: {type: Boolean, default: true}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_PRODUCT
