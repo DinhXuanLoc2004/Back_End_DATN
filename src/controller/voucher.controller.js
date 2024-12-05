@@ -5,7 +5,7 @@ class VoucherController {
     static getAllVoucherToAdmin = async (req, res, next) => {
         new OK({
             message: 'get all voucher to admin!',
-            metadata: await VoucherController.getAllVoucherToAdmin()
+            metadata: await VoucherService.getAllVoucherToAdmin()
         }).send(res)
     }
 

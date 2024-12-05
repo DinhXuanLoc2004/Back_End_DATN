@@ -559,7 +559,7 @@ class ProductService {
     }
 
     static getAllProducts = async ({ query, body }) => {
-        const { user_id, category_id, sort, is_delete, is_public,
+        const { user_id, category_id, sort, is_delete = 'false', is_public = 'true',
             page, page_size, sale_id, get_top_trendings, get_least_sold_products } = query
         const { price, colors_id, sizes_id, rating, brands_id, categories_id } = body
 

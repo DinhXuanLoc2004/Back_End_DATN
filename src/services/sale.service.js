@@ -327,7 +327,7 @@ class SaleService {
     }
 
     static getSalesActive = async ({ query }) => {
-        const { active } = query
+        const { active = 'true' } = query
         let pipeline = [{
             $project: {
                 name_sale: 1,
@@ -345,8 +345,8 @@ class SaleService {
                 {
                     $match: {
                         is_active: true,
-                        time_start: { $lt: date },
-                        time_end: { $gt: date }
+                        time_start: { $lte: date },
+                        time_end: { $gte: date }
                     }
                 },
                 ...pipeline
