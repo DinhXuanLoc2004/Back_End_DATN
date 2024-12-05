@@ -30,11 +30,13 @@ class ColorService {
         return selectMainFilesData(color)
     }
 
-    static getAllColor = async () => {
+    static getAllColor = async ({query}) => {
+        const {is_deleted} = query
+        const condition_is_deleted = is_deleted === 'true' ? true : false
         const colors = await colorModel.aggregate([
             {
                 $match: {
-                    is_deleted: false
+                    is_deleted: condition_is_deleted
                 }
             }, {
                 $project: {

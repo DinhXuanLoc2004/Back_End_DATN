@@ -11,7 +11,6 @@ const COLLECTION_NAME_PRODUCT = 'Products'
 const productSchema = new mongoose.Schema({
     name_product: {type: String, required: true},
     description: {type: String, required: true},
-    is_trending: {type: Boolean, default: false},
     images_product: { type: Array, default: [] },
     category_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_CATEGORY },
     brand_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_BRAND },

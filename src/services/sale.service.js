@@ -2,7 +2,7 @@ const { ConflictRequestError, NotFoundError } = require("../core/error.reponse")
 const { productModel, COLLECTION_NAME_PRODUCT } = require("../models/product.model")
 const { COLLECTION_NAME_PRODUCT_SALE, product_saleModel } = require("../models/product_sale.model")
 const { saleModel, COLLECTION_NAME_SALE } = require("../models/sale.model")
-const { selectFilesData, convertToObjectId, convertToDate, deleteImage, validateTime, formatStringToArray, unselectFilesData } = require("../utils")
+const { selectFilesData, convertToObjectId, convertToDate, deleteImage, validateTime, formatStringToArray, unselectFilesData, convertBoolen } = require("../utils")
 const cloudinary = require('../configs/config.cloudinary')
 const { COLLECTION_NAME_CATEGORY } = require("../models/category.model")
 const { COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
@@ -326,23 +326,45 @@ class SaleService {
         return deleteSale
     }
 
-    static getSalesActive = async () => {
-        const date = new Date()
-        const sales = await saleModel.aggregate([{
-            $match: {
-                is_active: true,
-                time_start: { $lt: date },
-                time_end: { $gt: date }
-            }
-        }, {
+    static getSalesActive = async ({ query }) => {
+        const { active } = query
+        let pipeline = [{
             $project: {
                 name_sale: 1,
                 discount: 1,
                 time_start: 1,
                 time_end: 1,
-                thumb: '$image_sale.url'
+                thumb: '$image_sale.url',
+                is_active: 1
             }
-        }])
+        }]
+        const date = new Date()
+        const condition = convertBoolen(active)
+        if (condition) {
+            pipeline = [
+                {
+                    $match: {
+                        is_active: true,
+                        time_start: { $lt: date },
+                        time_end: { $gt: date }
+                    }
+                },
+                ...pipeline
+            ]
+        } else {
+            pipeline = [
+                {
+                    $match: {
+                        $or: [
+                            { is_active: false },
+                            { time_end: { $lte: date } }
+                        ]
+                    }
+                },
+                ...pipeline
+            ]
+        }
+        const sales = await saleModel.aggregate(pipeline)
         return sales
     }
 

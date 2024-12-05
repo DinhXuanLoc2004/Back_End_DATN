@@ -6,7 +6,7 @@ const COLLECTION_NAME_VOUCHER = 'Vouchers'
 const voucherSchema = new mongoose.Schema({
     voucher_name: { type: String, require: true },
     voucher_description: { type: String, require: true },
-    voucher_type: { type: String, enum: ['deduct_money', 'percent','complete_coin'], default: 'deduct_money' },
+    voucher_type: { type: String, enum: ['deduct_money', 'percent'], default: 'deduct_money' },
     voucher_value: { type: Number, require: true },
     voucher_code: { type: String, require: true, unique: true },
     image_voucher: {type: Object, require: true, default: {}},

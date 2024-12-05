@@ -6,6 +6,8 @@ const { ConflictRequestError } = require('../core/error.reponse')
 const crypto = require('crypto')
 const DurationsConstants = require('../constants/durations.constants')
 
+const convertBoolen = (condition) => condition === 'true' ? true : false
+
 const convertTimestampToDate = (time) => {
     const date = new Date(time * 1000)
     return date
@@ -116,5 +118,6 @@ module.exports = {
     createdSignatueMomo,
     convertVNDToUSD,
     isTimeExceededUTC,
-    convertTimestampToDate
+    convertTimestampToDate,
+    convertBoolen
 }

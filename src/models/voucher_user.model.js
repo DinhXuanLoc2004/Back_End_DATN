@@ -8,7 +8,8 @@ const COLLECTION_NAME_VOUCHER_USER = 'Vouchers_Users'
 const voucher_userSchema = new mongoose.Schema({
     voucher_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_VOUCHER},
     user_id: {type: mongoose.Types.ObjectId, ref: DOCUMENT_NAME_USER},
-    is_used: {type: Boolean, default: false}
+    is_used: {type: Boolean, default: false},
+    is_active: {type: Boolean, default: true}
 }, {
     timestamps: true,
     collection: COLLECTION_NAME_VOUCHER_USER

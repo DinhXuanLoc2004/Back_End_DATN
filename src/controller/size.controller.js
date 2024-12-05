@@ -26,7 +26,7 @@ class SizeController {
     static getAllSize = async (req, res, next) => {
         new OK({
             message: 'Get all sizes success!',
-            metadata: await SizeService.getAllSize()
+            metadata: await SizeService.getAllSize({query: req.query})
         }).send(res)
     }
 

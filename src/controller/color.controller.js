@@ -26,7 +26,7 @@ class ColorController {
     static getAllColor = async (req, res, next) => {
         new OK({
             message: 'Get all colors success!',
-            metadata: await ColorService.getAllColor()
+            metadata: await ColorService.getAllColor({query: req.query})
         }).send(res)
     }
 

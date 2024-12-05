@@ -26,11 +26,13 @@ class SizeService {
         return selectMainFilesData(size)
     }
 
-    static getAllSize = async () => {
+    static getAllSize = async ({query}) => {
+        const {is_deleted} = query
+        const condition_is_delete = is_deleted === 'true' ? true : false
         const sizes = await sizeModel.aggregate([
             {
                 $match: {
-                    is_deleted: false
+                    is_deleted: condition_is_delete
                 }
             }, {
                 $project: {
