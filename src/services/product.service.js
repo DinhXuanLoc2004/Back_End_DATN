@@ -12,7 +12,7 @@ const { sizeModel, COLLECTION_NAME_SIZE } = require("../models/size.model")
 const { product_variantModel, COLLECTION_NAME_PRODUCT_VARIANT } = require("../models/product_variant.model")
 const { COLLECTION_NAME_USER } = require("../models/user.model")
 const { COLLECTION_NAME_IMAGE_PRODUCT_COLOR } = require("../models/image_product_color.model")
-const { size } = require("lodash")
+const { size, get } = require("lodash")
 const { COLLECTION_NAME_PRODUCT_SALE } = require("../models/product_sale.model")
 const { COLLECTION_NAME_CART } = require("../models/cart.model")
 const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
@@ -608,7 +608,7 @@ class ProductService {
             matchCondition.is_public = condition_is_public
         }
 
-        const pipeline = [
+        let pipeline = [
             {
                 $match: matchCondition
             }, {
@@ -922,27 +922,31 @@ class ProductService {
         }
 
         if (get_top_trendings && !get_least_sold_products) {
-            pipeline.push([
+            const num_top_trending = Number(get_top_trendings)
+            pipeline = [
+                ...pipeline,
                 {
                     $sort: {
                         total_orders: -1
                     }
                 }, {
-                    $limit: Number(get_top_trendings)
+                    $limit: num_top_trending
                 }
-            ])
+            ]
         }
 
         if (!get_top_trendings && get_least_sold_products) {
-            pipeline.push([
+            const num_least_sold_products = Number(get_least_sold_products)
+            pipeline = [
+                ...pipeline,
                 {
                     $sort: {
                         total_orders: 1
                     }
                 }, {
-                    $limit: Number(get_least_sold_products)
+                    $limit: num_least_sold_products
                 }
-            ])
+            ]
         }
 
         const products = await productModel.aggregate(pipeline)
@@ -1004,7 +1008,7 @@ class ProductService {
             currentPage: page
         }
     }
-  
+
     static checkParamsProduct = async ({ body }) => {
         const { name_product, description, images, category_id, brand_id, product_variants, is_public } = body
         if (!name_product || !description || !images || !category_id || !brand_id || !product_variants || !is_public)
