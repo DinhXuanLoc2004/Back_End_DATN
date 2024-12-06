@@ -161,7 +161,7 @@ class VoucherService {
     }
 
     static getAllVouchers = async ({ query }) => {
-        const { user_id, active = 'true', is_public = 'false' } = query
+        const { user_id, active, is_public = 'false' } = query
         const date = new Date()
         let pipeline = [{
             $lookup: {

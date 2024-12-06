@@ -560,7 +560,8 @@ class ProductService {
 
     static getAllProducts = async ({ query, body }) => {
         const { user_id, category_id, sort, is_delete = 'false', is_public = 'true',
-            page, page_size, sale_id, get_top_trendings, get_least_sold_products } = query
+            page, page_size, sale_id,
+            get_top_trendings, get_least_sold_products, get_products_to_favorite } = query
         const { price, colors_id, sizes_id, rating, brands_id, categories_id } = body
 
         const condition_is_delete = convertBoolen(is_delete)
@@ -856,6 +857,15 @@ class ProductService {
             }
         ]
 
+        if (get_products_to_favorite && user_id) {
+            const condition_get_products_to_favorite = convertBoolen(get_products_to_favorite)
+            pipeline.push({
+                $match: {
+                    isFavorite: condition_get_products_to_favorite
+                }
+            })
+        }
+
         const matchFilter = {}
 
         if (Array.isArray(price) && price.length === 2 && price[1] > 0) {
@@ -971,12 +981,45 @@ class ProductService {
     }
 
     static getDataFilter = async () => {
-        const colors = await colorModel.aggregate([{ $project: { _id: 1, hex_color: 1, name_color: 1 } }])
-        const sizes = await sizeModel.aggregate([{ $project: { _id: 1, size: 1 } }])
-        const brands = await brandModel.aggregate([{
-            $addFields: { thumb_brand: '$image_brand.url' }
-        },
-        { $project: { _id: 1, name_brand: 1, thumb_brand: 1 } }])
+        const colors = await colorModel.aggregate([
+            {
+                $match: {
+                    is_deleted: false
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    hex_color: 1,
+                    name_color: 1
+                }
+            }
+        ])
+
+        const sizes = await sizeModel.aggregate([
+            {
+                $match: {
+                    is_deleted: false
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    size: 1
+                }
+            }
+        ])
+
+        const brands = await brandModel.aggregate([
+            {
+                $match: {
+                    is_delete: false
+                }
+            },
+            {
+                $addFields: { thumb_brand: '$image_brand.url' }
+            },
+            { $project: { _id: 1, name_brand: 1, thumb_brand: 1 } }])
         const price = await product_variantModel.aggregate([
             {
                 $group: {
@@ -1011,7 +1054,7 @@ class ProductService {
 
     static checkParamsProduct = async ({ body }) => {
         const { name_product, description, images, category_id, brand_id, product_variants, is_public } = body
-        if (!name_product || !description || !images || !category_id || !brand_id || !product_variants || !is_public)
+        if (!name_product || !description || !images || !category_id || !brand_id || !product_variants || is_public === undefined || is_public === null)
             throw new ConflictRequestError('Please provide full information!')
         const category = await categoryModel.findById(category_id).lean()
         if (category.depth !== 2) throw new ConflictRequestError('The depth of category must be 2!')

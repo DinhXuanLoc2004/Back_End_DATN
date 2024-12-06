@@ -154,6 +154,7 @@ class FavoriteService {
     static addFavorite = async ({ body }) => {
         const { product_id, user_id } = body
         const favoriteExited = await favoriteModel.findOneAndDelete({ product_id, user_id }).lean()
+        console.log(favoriteExited);
         if (favoriteExited) return false
         const newFavorite = await favoriteModel.create({
             product_id,
