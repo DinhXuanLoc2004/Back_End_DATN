@@ -46,8 +46,8 @@ class VoucherUserService {
             }, {
                 $match: {
                     is_active: true,
-                    time_start: { $lt: date },
-                    time_end: { $gt: date },
+                    time_start: { $lte: date },
+                    time_end: { $gte: date },
                     $or: [
                         {
                             quantity: 'Infinity'

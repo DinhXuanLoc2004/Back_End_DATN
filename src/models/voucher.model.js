@@ -12,7 +12,7 @@ const voucherSchema = new mongoose.Schema({
     image_voucher: {type: Object, require: true, default: {}},
     time_start: { type: Date, require: true },
     time_end: { type: Date, require: true },
-    quantity: { type: mongoose.Schema.Types.Mixed, require: true },
+    quantity: { type: Number, require: true },
     min_order_value: { type: Number, require: true },
     is_active: { type: Boolean, require: true },
     is_voucher_new_user: {type: Boolean, default: false}

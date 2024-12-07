@@ -12,5 +12,6 @@ router.put('/update_voucher', upload.single('image'), uploadSingleImageMiddlewar
     asyncHandler(VoucherController.updateVoucher))
 router.get('/get_voucher_detail_update', asyncHandler(VoucherController.getDetailVoucherUpdate))
 router.get('/get_all_vouchers/admin', asyncHandler(VoucherController.getAllVoucherToAdmin))
+router.put('/toggle_active_voucher', asyncHandler(VoucherController.toggleActieVoucher))
 
 module.exports = router

@@ -2,6 +2,13 @@ const { CREATED, OK } = require('../core/success.response')
 const VoucherService = require('../services/voucher.service')
 
 class VoucherController {
+    static toggleActieVoucher = async (req, res, next) => {
+        new OK({
+            message: 'Toggle voucher success!',
+            metadata: await VoucherService.toggleActiveVoucher({ query: req.query })
+        }).send(res)
+    }
+
     static getAllVoucherToAdmin = async (req, res, next) => {
         new OK({
             message: 'get all voucher to admin!',

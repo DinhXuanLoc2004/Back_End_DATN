@@ -237,7 +237,7 @@ class VoucherService {
                     {
                         $match: {
                             is_active: true,
-                            is_voucher_new_user: condition_public,
+                            is_voucher_new_user: !condition_public,
                             time_start: { $lte: date },
                             time_end: { $gte: date },
                             $or: [
@@ -256,7 +256,7 @@ class VoucherService {
                     {
                         $match: {
                             is_active: false,
-                            is_voucher_new_user: condition_public,
+                            is_voucher_new_user: !condition_public,
                             time_end: { $lt: date },
                             $or: [
                                 {
