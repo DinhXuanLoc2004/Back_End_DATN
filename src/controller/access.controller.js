@@ -2,6 +2,20 @@ const { CREATED, OK } = require("../core/success.response");
 const AccessService = require("../services/access.service");
 
 class AccessController {
+  static updateStatusUser = async (req, res, next) => {
+    new OK({
+      message: 'Update status user success!',
+      metadata: await AccessService.updateStatusUser({ query: req.query })
+    }).send(res)
+  }
+
+  static getAllUsers = async (req, res, next) => {
+    new OK({
+      message: 'Get all users success!',
+      metadata: await AccessService.getAllUsers({ query: req.query })
+    }).send(res)
+  }
+
   static setFcmToken = async (req, res, next) => {
     new OK({
       message: 'Set fcm token success!',

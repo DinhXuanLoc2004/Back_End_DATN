@@ -1,15 +1,16 @@
 const express = require("express");
 const { asyncHandler } = require("../utils");
-const accessController = require("../controller/access.controller");
 const AccessController = require("../controller/access.controller");
 const router = express.Router();
 
-router.post('/signup', asyncHandler(accessController.signUp));
-router.post('/login', asyncHandler(accessController.login));
-router.post('/verify_otp', asyncHandler(accessController.verifyAccountOtp));
-router.post('/resend_otp', asyncHandler(accessController.sendOtp));
-router.post('/forgot_password', asyncHandler(accessController.forgotPassword));
-router.post('/reset_password', asyncHandler(accessController.resetPassword));
+router.post('/signup', asyncHandler(AccessController.signUp));
+router.post('/login', asyncHandler(AccessController.login));
+router.post('/verify_otp', asyncHandler(AccessController.verifyAccountOtp));
+router.post('/resend_otp', asyncHandler(AccessController.sendOtp));
+router.post('/forgot_password', asyncHandler(AccessController.forgotPassword));
+router.post('/reset_password', asyncHandler(AccessController.resetPassword));
 router.post('/set_fcm_token', asyncHandler(AccessController.setFcmToken))
+router.get('/get_all_users', asyncHandler(AccessController.getAllUsers))
+router.put('/update_status_user', asyncHandler(AccessController.updateStatusUser))
 
 module.exports = router;

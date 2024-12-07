@@ -4,13 +4,84 @@ const {
   AuthFailureError,
   ConflictRequestError,
 } = require("../core/error.reponse");
+const { COLLECTION_NAME_ORDER } = require("../models/order.model");
 const { otpModel } = require("../models/otp.model");
+const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model");
 const { userModel } = require("../models/user.model");
 const { hashData, selectFilesData, compareData, selectMainFilesData } = require("../utils");
 const OtpService = require("./otp.service");
 const TokenService = require("./token.service");
 
 class AccessService {
+  static updateStatusUser = async ({ query }) => {
+    const { email } = query
+    const user = await userModel.findOne({ email }).lean()
+    if (!user) throw new BadRequestError('Email not found!')
+    const newStatus = user.status === 'active' ? 'inactive' : 'active'
+    const userUpdated = await userModel.findByIdAndUpdate(user._id, {
+      status: newStatus
+    }, {
+      new: true
+    })
+    return selectFilesData({ fileds: ['_id', 'email', 'status'], object: userUpdated })
+  }
+
+  static getAllUsers = async ({ query }) => {
+    const { status } = query
+
+    let pipeline = [
+      {
+        $lookup: {
+          from: COLLECTION_NAME_ORDER,
+          localField: '_id',
+          foreignField: 'user_id',
+          as: 'orders',
+          pipeline: [
+            {
+              $match: {
+                payment_status: true
+              }
+            }, {
+              $lookup: {
+                from: COLLECTION_NAME_PRODUCT_ORDER,
+                localField: '_id',
+                foreignField: 'order_id',
+                as: 'products_order'
+              }
+            }, {
+              $addFields: {
+                sum_order: { $sum: '$products_order.quantity' }
+              }
+            }
+          ]
+        }
+      }, {
+        $addFields: {
+          total_orders: { $sum: '$orders.sum_order' }
+        }
+      }, {
+        $project: {
+          orders: 0
+        }
+      }
+    ]
+
+    if (status) {
+      pipeline = [
+        {
+          $match: {
+            status: status
+          }
+        },
+        ...pipeline
+      ]
+    }
+
+    const users = await userModel.aggregate(pipeline)
+
+    return users
+  }
+
   static setFcmToken = async ({ query, body }) => {
     const { user_id } = query
     const { fcm_token } = body
