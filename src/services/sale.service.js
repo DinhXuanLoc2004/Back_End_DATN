@@ -278,13 +278,14 @@ class SaleService {
         const diff1 = old_product_ids.filter(product_id => !arr_product_ids.includes(product_id))
         if (diff1) {
             diff1.forEach(async product_id => {
-                const deleteProductSale = await product_saleModel.findOneAndDelete({ product_id, sale_id: _id })
+                const deleteProductSale = await product_saleModel.findOneAndUpdate({ product_id, sale_id: _id }, { is_active: false })
                 if (!deleteProductSale) throw new ConflictRequestError('Error delete product sale')
             });
         }
         const diff2 = arr_product_ids.filter(product_id => !old_product_ids.includes(product_id))
         if (diff2) {
             diff2.forEach(async product_id => {
+                await product_saleModel.updateMany({ product_id }, { is_active: false })
                 const newProductSale = await product_saleModel.create({
                     product_id,
                     sale_id: _id
