@@ -37,33 +37,33 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
 })
 
 const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
-    if (!req.body.images || !Array.isArray(req.body.images)) {
-        return next()
-    }
+    // if (!req.body.images || !Array.isArray(req.body.images)) {
+    //     return next()
+    // }
 
     console.log(req.body.images);
-    const images = req.body.images.reduce((files, file) => {
-        if (file.url && file.public_id && file.type) {
-            files.push(Promise.resolve(file))
-        } else {
-            if (pattern_media.test(file.originalname)) {
-                const resource_type = pattern.test(file.originalname) ? 'image' : 'video'
-                const asyncImage = new Promise((resolve, reject) => {
-                    cloudinary.uploader.upload_stream({ resource_type: resource_type },
-                        (err, uploadResult) => {
-                            if (err) reject(err)
-                            const { public_id, url } = uploadResult
-                            return resolve({ public_id, url, type: resource_type })
-                        }).end(file.buffer)
-                })
-                files.push(asyncImage)
-            }
-        }
-        return files
-    }, [])
+    // const images = req.body.images.reduce((files, file) => {
+    //     if (file.url && file.public_id && file.type) {
+    //         files.push(Promise.resolve(file))
+    //     } else {
+    //         if (pattern_media.test(file.originalname)) {
+    //             const resource_type = pattern.test(file.originalname) ? 'image' : 'video'
+    //             const asyncImage = new Promise((resolve, reject) => {
+    //                 cloudinary.uploader.upload_stream({ resource_type: resource_type },
+    //                     (err, uploadResult) => {
+    //                         if (err) reject(err)
+    //                         const { public_id, url } = uploadResult
+    //                         return resolve({ public_id, url, type: resource_type })
+    //                     }).end(file.buffer)
+    //             })
+    //             files.push(asyncImage)
+    //         }
+    //     }
+    //     return files
+    // }, [])
 
-    const data = await Promise.all(images)
-    req.body.images = data
+    // const data = await Promise.all(images)
+    // req.body.images = data
     return next()
 })
 
