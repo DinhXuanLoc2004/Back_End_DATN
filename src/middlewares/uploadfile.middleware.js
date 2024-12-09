@@ -37,12 +37,12 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
 })
 
 const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
-    if (!req.files || !Array.isArray(req.files)) {
+    if (!req.body.images || !Array.isArray(req.body.images)) {
         return next()
     }
 
-    console.log(req.files);
-    const images = req.files.reduce((files, file) => {
+    console.log(req.body.images);
+    const images = req.body.images.reduce((files, file) => {
         if (file.url && file.public_id && file.type) {
             files.push(Promise.resolve(file))
         } else {

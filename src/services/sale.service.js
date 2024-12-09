@@ -382,7 +382,7 @@ class SaleService {
         if (!newSale) throw new ConflictRequestError('Error created new sale!')
         let listNewProductSales = []
         for (const product_id of arr_product_ids) {
-            await product_saleModel.findOneAndUpdate({ product_id }, { is_active: false }, { new: true })
+            await product_saleModel.updateMany({ product_id }, { is_active: false })
             const newProductSale = await product_saleModel.create({
                 product_id,
                 sale_id: newSale._id
