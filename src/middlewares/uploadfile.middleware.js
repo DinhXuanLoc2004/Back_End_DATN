@@ -37,6 +37,7 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
 })
 
 const mergeImages = asyncHandler(async (req, res, next) => {
+    if(!req.body.old_images) return next()
     const arr_old_images = JSON.parse(req.body.old_images)
     req.body.images = [...req.body.images, ...arr_old_images]
     return next()
