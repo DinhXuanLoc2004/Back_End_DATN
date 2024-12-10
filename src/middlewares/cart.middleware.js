@@ -40,15 +40,6 @@ class CartMiddleWare {
                 message: 'Invalid product'
             }).send(res)
         }
-        const cart = await cartModel.findOne({ user_id, product_variant_id }).lean()
-        const maxQuantityCanBeAdd = variant && cart ? variant.quantity - cart.quantity : !cart ? variant.quantity : 0
-        console.log(maxQuantityCanBeAdd);
-        if (quantity > maxQuantityCanBeAdd) {
-            return new FailResponse({
-                message: 'Invalid quantity',
-                metadata: maxQuantityCanBeAdd
-            })
-        }
         next()
     })
 }

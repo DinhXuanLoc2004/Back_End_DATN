@@ -62,12 +62,13 @@ class ProductVariantService {
         }
         const quantity_in_cart = cart ? cart.quantity : 0
         const max_quantity = product_variant ? product_variant.quantity - quantity_in_cart : 0
+        console.log('max quantity:: ', max_quantity);
         return {
             variant: product_variant ? selectFilesData({
                 fileds: ['_id', 'product_id', 'size_id', 'image_product_color_id', 'quantity', 'price'],
                 object: product_variant
             }) : null,
-            max_quantity
+            max_quantity: max_quantity
         }
     }
 }

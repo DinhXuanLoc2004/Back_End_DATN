@@ -53,6 +53,7 @@ class ProductService {
                     quantity: element.quantity,
                     size_id: element.size_id,
                     image_product_color_id: element.image_product_color_id,
+                    product_id: _id
                 })
             } else {
                 updated_product_variant = await product_variantModel.findByIdAndUpdate(element.product_variant_id,
