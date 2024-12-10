@@ -33,16 +33,18 @@ class CartMiddleWare {
                     product: { $arrayElemAt: ['$product', 0] }
                 }
             }
-        ])[0]
-        if (!product_variant.product) {
-            new FailResponse({
+        ])
+        const variant = product_variant[0]
+        if (!variant || !variant.product) {
+            return new FailResponse({
                 message: 'Invalid product'
             }).send(res)
         }
-        const cart = await cartModel.findOne({user_id, product_variant_id}).lean()
-        const maxQuantityCanBeAdd = product_variant.quantity - cart.quantity
+        const cart = await cartModel.findOne({ user_id, product_variant_id }).lean()
+        const maxQuantityCanBeAdd = variant && cart ? variant.quantity - cart.quantity : !cart ? variant.quantity : 0
+        console.log(maxQuantityCanBeAdd);
         if (quantity > maxQuantityCanBeAdd) {
-            new FailResponse({
+            return new FailResponse({
                 message: 'Invalid quantity',
                 metadata: maxQuantityCanBeAdd
             })

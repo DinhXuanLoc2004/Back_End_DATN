@@ -46,16 +46,26 @@ class ProductService {
         let arr_product_variants_update = []
         for (let index = 0; index < arr_product_variants.length; index++) {
             const element = arr_product_variants[index];
-            const updated_product_variant = await product_variantModel.findByIdAndUpdate(element.product_variant_id ?? '',
-                {
+            let updated_product_variant
+            if (!element.product_variant_id) {
+                updated_product_variant = await product_variantModel.create({
                     price: element.price,
                     quantity: element.quantity,
                     size_id: element.size_id,
                     image_product_color_id: element.image_product_color_id,
-                    is_delete: element.is_delete
-                },
-                { upsert: true, new: true },
-            )
+                })
+            } else {
+                updated_product_variant = await product_variantModel.findByIdAndUpdate(element.product_variant_id,
+                    {
+                        price: element.price,
+                        quantity: element.quantity,
+                        size_id: element.size_id,
+                        image_product_color_id: element.image_product_color_id,
+                        is_delete: element.is_delete
+                    },
+                    { new: true },
+                )
+            }
             if (!updated_product_variant) throw new ConflictRequestError('Error conlifct update product variant!')
             arr_product_variants_update.push(updated_product_variant)
         }
@@ -277,7 +287,11 @@ class ProductService {
         const thumb = product.images_product[0].url
         const Ob_product_id = convertToObjectId(product_id)
         const variants = await product_variantModel.aggregate([{
-            $match: { product_id: Ob_product_id }
+            $match: {
+                product_id: Ob_product_id,
+                quantity: { $gt: 0 },
+                is_delete: false
+            }
         }, {
             $group: {
                 _id: null,

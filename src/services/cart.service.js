@@ -262,7 +262,16 @@ class CartService {
                             then: true,
                             else: false
                         }
-                    }
+                    },
+                    is_delete_product: '$product.is_delete',
+                    is_public_product: '$product.is_public',
+                    is_delete_variant: '$product_variant.is_delete'
+                }
+            },{
+                $match: {
+                    is_delete_product: false,
+                    is_public_product: true,
+                    is_delete_variant: false
                 }
             }, {
                 $project: {
@@ -277,7 +286,10 @@ class CartService {
                     create_at: '$product.createdAt',
                     isFavorite: 1,
                     product_id: '$product._id',
-                    product_variant_id: '$product_variant._id'
+                    product_variant_id: '$product_variant._id',
+                    is_delete_product: 1,
+                    is_public_product: 1,
+                    is_delete_variant: 1
                 }
             }
         ])
@@ -301,7 +313,7 @@ class CartService {
             return selectFilesData({ fileds: ['_id', 'product_variant_id', 'quantity', 'user_id'], object: cartUpdate })
         }
         const newCart = await cartModel.create({ product_variant_id, quantity, user_id });
-        if (!newCart) throw new ConflictRequestError('Error created item cart')
+        if (!newCart) throw new ConflictRequestError('Error created item cart')  
         return selectFilesData({ fileds: ['_id', 'product_variant_id', 'quantity', 'user_id'], object: newCart })
     }
 }
