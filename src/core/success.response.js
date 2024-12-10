@@ -35,7 +35,7 @@ class CREATED extends SuccessResponse{
 }
 
 class FailResponse extends SuccessResponse{
-    constructor({message, statusCode = StatusCode.CREATED, reasonStatusCode = ReasonStatusCode.CREATED, metadata}){
+    constructor({message, statusCode = StatusCode.FAILED, reasonStatusCode = ReasonStatusCode.FAILED, metadata}){
         super({message, statusCode, reasonStatusCode, metadata})
     }
 }
