@@ -2,14 +2,14 @@ const StatusCode = {
     FORBIDDEN: 403,
     CONFLICT: 409,
     UNAUTHORIZED: 401,
-    NOTFOUND: 404
+    NOTFOUND: 404,
 }
 
 const ReasonStatusCode = {
     FORBIDDEN: 'Bad reqest error',
     CONFLICT: 'Conflict error',
     UNAUTHORIZED: 'Authentication failed',
-    NOTFOUND: 'Not Found'
+    NOTFOUND: 'Not Found',
 }
 
 class ErrorResponse extends Error {
@@ -26,19 +26,19 @@ class ConflictRequestError extends ErrorResponse {
 }
 
 class BadRequestError extends ErrorResponse {
-    constructor( message = ReasonStatusCode.FORBIDDEN, statusCode = StatusCode.FORBIDDEN) {
+    constructor(message = ReasonStatusCode.FORBIDDEN, statusCode = StatusCode.FORBIDDEN) {
         super(message, statusCode)
     }
 }
 
 class AuthFailureError extends ErrorResponse {
-    constructor( message = ReasonStatusCode.UNAUTHORIZED, statusCode = StatusCode.UNAUTHORIZED) {
+    constructor(message = ReasonStatusCode.UNAUTHORIZED, statusCode = StatusCode.UNAUTHORIZED) {
         super(message, statusCode)
     }
 }
 
 class NotFoundError extends ErrorResponse {
-    constructor( message = ReasonStatusCode.NOTFOUND, statusCode = StatusCode.NOTFOUND) {
+    constructor(message = ReasonStatusCode.NOTFOUND, statusCode = StatusCode.NOTFOUND) {
         super(message, statusCode)
     }
 }

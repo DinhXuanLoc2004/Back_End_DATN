@@ -36,6 +36,13 @@ const uploadSingleImageMiddleware = asyncHandler(async (req, res, next) => {
     next()
 })
 
+const mergeImages = asyncHandler(async (req, res, next) => {
+    if(!req.body.old_images) return next()
+    const arr_old_images = JSON.parse(req.body.old_images)
+    req.body.images = [...req.body.images, ...arr_old_images]
+    return next()
+})
+
 const uploadImageMiddleware = asyncHandler(async (req, res, next) => {
     if (!req.files || !Array.isArray(req.files)) {
         return next()
@@ -71,5 +78,6 @@ module.exports = {
     upload,
     uploadImageMiddleware,
     uploadSingleImageMiddleware,
-    deleteImageMiddleware
+    deleteImageMiddleware,
+    mergeImages
 }

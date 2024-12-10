@@ -487,7 +487,7 @@ class ProductService {
                                 }
                             },
                             then: { $avg: '$variants.avg_ratings_to_variant' },
-                            else: 0
+                            else: 5
                         }
                     },
                     total_orders: { $sum: '$variants.sum_orders_to_variant' },
@@ -784,7 +784,7 @@ class ProductService {
                                 }
                             },
                             then: { $avg: '$variants.avg_ratings_to_variant' },
-                            else: 0
+                            else: 5
                         }
                     },
                     total_orders: { $sum: '$variants.sum_orders_to_variant' },
