@@ -21,8 +21,47 @@ const { COLLECTION_NAME_VOUCHER } = require("../models/voucher.model")
 const DurationsConstants = require("../constants/durations.constants")
 const { query } = require("express")
 const { COLLECTION_NAME_REVIEW } = require("../models/review.model")
+const { RedisService } = require("./redis.service")
 
 class OrderService {
+    static refundInventoryQuantity = async ({ order_id }) => {
+        const order_Obid = convertToObjectId(order_id)
+        const order = await orderModel.aggregate([
+            {
+                $match: {
+                    _id: order_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_ORDER,
+                    localField: '_id',
+                    foreignField: 'order_id',
+                    as: 'products_order',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_VARIANT,
+                                localField: 'product_variant_id',
+                                foreignField: '_id',
+                                as: 'product_variant'
+                            }
+                        }, {
+                            $addFields: {
+                                product_variant: { $arrayElemAt: ['$product_variant', 0] }
+                            }
+                        }
+                    ]
+                }
+            }
+        ])
+        const product_variants = order[0].products_order.product_variant
+        for (let index = 0; index < product_variants.length; index++) {
+            const element = product_variants[index];
+            await product_variantModel.findByIdAndUpdate(element._id,
+                { $inc: { quantity: element.quantity } })
+        }
+    }
+
     static getProductDetailOrder = async ({ query }) => {
         const { product_order_id } = query
         const product_order_Obid = convertToObjectId(product_order_id)
@@ -963,7 +1002,7 @@ class OrderService {
             } else {
                 orderUpdatedResponse.zp_trans_token = order.zp_trans_token
             }
-            await redis_client.setEx(order_id, DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
+            await RedisService.setExOrderID({order_id})
             await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
             if (voucher_user_id) {
                 if ((order.voucher_user_id != voucher_user_id)) {
@@ -984,7 +1023,7 @@ class OrderService {
             orderUpdatedResponse.approve = approve
             orderUpdatedResponse.id_order_paypal = paypal.id
             orderUpdatedResponse.zp_trans_token = ''
-            await redis_client.setEx(order_id, DurationsConstants.DURATION_DEALINE_PAYMENT, 'orde_id')
+            await RedisService.setExOrderID({order_id})
             await StatusOrderService.createStatusOrder({ order_id, status: 'Unpaid' })
             if (voucher_user_id) {
                 if ((order.voucher_user_id != voucher_user_id)) {
@@ -1050,6 +1089,8 @@ class OrderService {
             })
             if (!new_product_order) throw new ConflictRequestError('Conflict created product order!')
             new_products_order.push(selectMainFilesData(new_product_order))
+            await product_variantModel.findByIdAndUpdate(product_order.product_variant_id,
+                { $inc: { quantity: - product_order.quantity } })
         }
 
         if (new_products_order.length < arr_products_order.length) throw new ConflictRequestError('Conflict created array products order')
@@ -1081,7 +1122,7 @@ class OrderService {
             if (!zalo_pay) throw new ConflictRequestError('Error create payment zalopay!')
             await orderModel.findByIdAndUpdate(newOrder._id, { zp_trans_token: zalo_pay.zp_trans_token })
             newOrderResponse.zp_trans_token = zalo_pay.zp_trans_token
-            await redis_client.setEx(newOrder._id.toString(), DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
+            await RedisService.setExOrderID({ order_id: newOrder._id.toString() })
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 
@@ -1093,7 +1134,7 @@ class OrderService {
             newOrderResponse.approve = approve
             newOrderResponse.id_order_paypal = paypal.id
             newOrderResponse.zp_trans_token = ''
-            await redis_client.setEx(newOrder._id.toString(), DurationsConstants.DURATION_DEALINE_PAYMENT, 'order_id')
+            await RedisService.setExOrderID({ order_id: newOrder._id.toString() })
             await StatusOrderService.createStatusOrder({ order_id: newOrder._id, status: 'Unpaid' })
         }
 
