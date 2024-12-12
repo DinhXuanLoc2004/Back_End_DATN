@@ -1,4 +1,5 @@
 const { BadRequestError, ConflictRequestError } = require("../core/error.reponse")
+const { COLLECTION_NAME_ORDER } = require("../models/order.model")
 const { COLLECTION_NAME_VOUCHER } = require("../models/voucher.model")
 const { voucher_userModel } = require("../models/voucher_user.model")
 const { unselectFilesData, convertToObjectId } = require("../utils")
@@ -58,12 +59,39 @@ class VoucherUserService {
                 }
             }
         ]
-        if(is_used !== 'all'){
+        if (is_used !== 'all') {
             pipeline.push({
                 $match: {
                     is_used: is_used_boolean
                 }
             })
+            if (is_used_boolean) {
+                pipeline = [
+                    ...pipeline,
+                    {
+                        $lookup: {
+                            from: COLLECTION_NAME_ORDER,
+                            localField: '_id',
+                            foreignField: 'voucher_user_id',
+                            as: 'order'
+                        }
+                    }, {
+                        $addFields: {
+                            order_id: {
+                                $cond: {
+                                    if: { $gt: [{ $size: '$order' }, 0] },
+                                    then: { $arrayElemAt: ['$order._id', 0] },
+                                    else: null
+                                }
+                            }
+                        }
+                    }, {
+                        $project: {
+                            order: 0
+                        }
+                    }
+                ]
+            }
         }
         if (min_order_value) {
             const number_min_order_value = Number.parseInt(min_order_value)

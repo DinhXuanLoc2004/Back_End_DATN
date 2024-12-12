@@ -12,7 +12,7 @@ const { COLLECTION_NAME_FAVORITE } = require("../models/favorite.model")
 class SaleService {
     static getDetailSaleUpdate = async ({ query }) => {
         const { sale_id } = query
-        const sale_Obid = sale_id
+        const sale_Obid = convertToObjectId(sale_id)
         const sale = await saleModel.aggregate([
             {
                 $match: {
@@ -43,6 +43,7 @@ class SaleService {
                                         $lookup: {
                                             from: COLLECTION_NAME_BRAND,
                                             localField: 'brand_id',
+                                            foreignField: '_id',
                                             as: 'brand'
                                         }
                                     }, {
@@ -69,6 +70,16 @@ class SaleService {
                             }
                         }
                     ]
+                }
+            }, {
+                $project: {
+                    discount: 1,
+                    time_start: 1,
+                    time_end: 1,
+                    is_acitve: 1,
+                    image_sale: 1,
+                    name_sale: 1,
+                    products: '$product_sale.product'
                 }
             }
         ])
