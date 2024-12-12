@@ -18,6 +18,7 @@ const { COLLECTION_NAME_CART } = require("../models/cart.model")
 const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { COLLECTION_NAME_ORDER } = require("../models/order.model")
 const { redis_client } = require("../configs/config.redis")
+const ReviewService = require("./review.service")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
@@ -457,13 +458,23 @@ class ProductService {
                                         $addFields: {
                                             review: { $arrayElemAt: ['$review', 0] }
                                         }
+                                    }, {
+                                        $addFields: {
+                                            num_review: {
+                                                $cond: {
+                                                    if: { $ne: ['$review.rating', null] },
+                                                    then: 1,
+                                                    else: 0
+                                                }
+                                            }
+                                        }
                                     }
                                 ]
                             }
                         }, {
                             $addFields: {
                                 sum_orders_to_variant: { $sum: '$product_orders.quantity' },
-                                avg_ratings_to_variant: { $avg: '$product_orders.review.rating' }
+                                avg_ratings_to_variant: { $avg: '$product_orders.review.rating' },
                             }
                         }
                     ]
@@ -568,11 +579,17 @@ class ProductService {
                     'sales_active.time_end': 1,
                     'sales_active.image_sale': { $arrayElemAt: ['$sales_active.image_sale.url', 0] },
                     'sales_active._id': 1,
+                    countReviews: 1
                 }
             }
         ])
+        const reviews = await ReviewService.getReviewForProduct({ query: { product_id } })
+        let productResponse = {
+            ...product[0],
+            countReviews: reviews.length
+        }
         if (!product) throw new ConflictRequestError('Error get detai product')
-        return product[0]
+        return productResponse
     }
 
     static getAllProducts = async ({ query, body }) => {
@@ -907,7 +924,7 @@ class ProductService {
         }
 
         if (rating) {
-            matchFilter.averageRating = { $gte: rating }
+            matchFilter.averageRating = { $eq: rating }
         }
 
         if (sale_id) {
