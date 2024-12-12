@@ -289,11 +289,11 @@ class SaleService {
             for (const product_id of diff2) {
                 await product_saleModel.updateMany({ product_id, sale_id: { $ne: _id } }, { is_active: false })
                 const newProductSale = await product_saleModel.findOneAndUpdate(
-                    { product_id, sale_id: _id }, 
+                    { product_id, sale_id: _id },
                     { is_active: true },
-                    { 
-                        upsert: true,       
-                        new: true         
+                    {
+                        upsert: true,
+                        new: true
                     }
                 );
                 if (!newProductSale) throw new ConflictRequestError('Error created product sale!')
@@ -334,7 +334,7 @@ class SaleService {
     }
 
     static getSalesActive = async ({ query }) => {
-        const { active = 'true' } = query
+        const { active } = query
         let pipeline = [{
             $project: {
                 name_sale: 1,
@@ -345,31 +345,33 @@ class SaleService {
                 is_active: 1
             }
         }]
-        const date = new Date()
-        const condition = convertBoolen(active)
-        if (condition) {
-            pipeline = [
-                {
-                    $match: {
-                        is_active: true,
-                        time_start: { $lte: date },
-                        time_end: { $gte: date }
-                    }
-                },
-                ...pipeline
-            ]
-        } else {
-            pipeline = [
-                {
-                    $match: {
-                        $or: [
-                            { is_active: false },
-                            { time_end: { $lte: date } }
-                        ]
-                    }
-                },
-                ...pipeline
-            ]
+        if (active) {
+            const date = new Date()
+            const condition = convertBoolen(active)
+            if (condition) {
+                pipeline = [
+                    {
+                        $match: {
+                            is_active: true,
+                            time_start: { $lte: date },
+                            time_end: { $gte: date }
+                        }
+                    },
+                    ...pipeline
+                ]
+            } else {
+                pipeline = [
+                    {
+                        $match: {
+                            $or: [
+                                { is_active: false },
+                                { time_end: { $lte: date } }
+                            ]
+                        }
+                    },
+                    ...pipeline
+                ]
+            }
         }
         const sales = await saleModel.aggregate(pipeline)
         return sales
