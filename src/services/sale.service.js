@@ -10,6 +10,72 @@ const { COLLECTION_NAME_BRAND } = require("../models/brand.model")
 const { COLLECTION_NAME_FAVORITE } = require("../models/favorite.model")
 
 class SaleService {
+    static getDetailSaleUpdate = async ({ query }) => {
+        const { sale_id } = query
+        const sale_Obid = sale_id
+        const sale = await saleModel.aggregate([
+            {
+                $match: {
+                    _id: sale_Obid
+                }
+            }, {
+                $lookup: {
+                    from: COLLECTION_NAME_PRODUCT_SALE,
+                    localField: '_id',
+                    foreignField: 'sale_id',
+                    as: 'product_sale',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT,
+                                localField: 'product_id',
+                                foreignField: '_id',
+                                as: 'product',
+                                pipeline: [
+                                    {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_CATEGORY,
+                                            localField: 'category_id',
+                                            foreignField: '_id',
+                                            as: 'category'
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_BRAND,
+                                            localField: 'brand_id',
+                                            as: 'brand'
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            category: { $arrayElemAt: ['$category', 0] },
+                                            brand: { $arrayElemAt: ['$brand', 0] },
+                                            thumb: { $arrayElemAt: ['$images_product.url', 0] },
+                                        }
+                                    }, {
+                                        $project: {
+                                            _id: 0,
+                                            product_id: '$_id',
+                                            thumb: 1,
+                                            name_category: '$category.name_category',
+                                            name_brand: '$brand.name_brand',
+                                            name_product: 1,
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product: { $arrayElemAt: ['$product', 0] }
+                            }
+                        }
+                    ]
+                }
+            }
+        ])
+        const response = sale[0]
+        return response
+    }
+
     static getProductsSale = async ({ query }) => {
         const { sale_id, category_id, user_id } = query
         const sale_Obid = convertToObjectId(sale_id)

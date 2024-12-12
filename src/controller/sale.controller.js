@@ -2,6 +2,13 @@ const { CREATED, OK } = require("../core/success.response")
 const SaleService = require("../services/sale.service")
 
 class SaleController {
+    static getDetailSaleUpdate = async (req, res, next) => {
+        new OK({
+            message: 'Get sale detail update success',
+            metadata: await SaleService.getDetailSaleUpdate({ query: req.query })
+        }).send(res)
+    }
+
     static getProductsSale = async (req, res, next) => {
         new OK({
             message: 'Get products sale success!',
@@ -47,7 +54,7 @@ class SaleController {
     static getSalesActive = async (req, res, next) => {
         new OK({
             message: 'Get sales active success!',
-            metadata: await SaleService.getSalesActive({query: req.query})
+            metadata: await SaleService.getSalesActive({ query: req.query })
         }).send(res)
     }
 
