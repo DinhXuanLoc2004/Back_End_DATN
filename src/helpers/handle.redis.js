@@ -1,5 +1,6 @@
 const { redis_client, redis_subscriber } = require("../configs/config.redis");
 const OrderService = require("../services/order.service");
+const { VALUE_ORDER_ID_KEY } = require("../services/redis.service");
 const { asyncHandler } = require("../utils");
 
 async function handleResdis() {
@@ -15,7 +16,10 @@ async function handleResdis() {
 
     await redis_subscriber.pSubscribe("__keyevent@0__:expired", async (message) => {
         console.log(message);
-        asyncHandler(await OrderService.cancelOrderPaymentDealine({order_id: message}))
+        const value = await redis_client.get(message)
+        if (value === VALUE_ORDER_ID_KEY) {
+            asyncHandler(await OrderService.cancelOrderPaymentDealine({order_id: message}))
+        }
     });
 }
 

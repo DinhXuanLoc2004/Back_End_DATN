@@ -236,7 +236,6 @@ class SaleService {
         const date = new Date()
         if ((convertToDate(time_start) >= convertToDate(time_end)) || date > convertToDate(time_end)) throw new ConflictRequestError('Invalid time!')
         const old_sale = await saleModel.findById(_id)
-        if (old_sale.image_sale.public_id !== image.public_id) deleteImage(old_sale.image_sale.public_id)
         const product_Obids = arr_product_ids.map(product_id => convertToObjectId(product_id))
         const discountProducts = await productModel.aggregate([
             {
@@ -273,25 +272,32 @@ class SaleService {
                 throw new ConflictRequestError('Discount is greater than the remaining discount percentage!')
             }
         })
-        const old_product_sale = await product_saleModel.find({ sale_id: _id }).lean()
+        const old_product_sale = await product_saleModel.find({ sale_id: _id, is_active: true }).lean()
         const old_product_ids = old_product_sale.map(sale => sale.product_id)
         const diff1 = old_product_ids.filter(product_id => !arr_product_ids.includes(product_id))
+        console.log('diff1:: ', diff1);
         if (diff1) {
-            diff1.forEach(async product_id => {
-                const deleteProductSale = await product_saleModel.findOneAndUpdate({ product_id, sale_id: _id }, { is_active: false })
+            for (const product_id of diff1) {
+                const deleteProductSale = await product_saleModel.findOneAndUpdate({ product_id, sale_id: _id, is_active: true },
+                    { is_active: false })
                 if (!deleteProductSale) throw new ConflictRequestError('Error delete product sale')
-            });
+            }
         }
         const diff2 = arr_product_ids.filter(product_id => !old_product_ids.includes(product_id))
+        console.log('diff2:: ', diff2);
         if (diff2) {
-            diff2.forEach(async product_id => {
-                await product_saleModel.updateMany({ product_id }, { is_active: false })
-                const newProductSale = await product_saleModel.create({
-                    product_id,
-                    sale_id: _id
-                })
+            for (const product_id of diff2) {
+                await product_saleModel.updateMany({ product_id, sale_id: { $ne: _id } }, { is_active: false })
+                const newProductSale = await product_saleModel.findOneAndUpdate(
+                    { product_id, sale_id: _id }, 
+                    { is_active: true },
+                    { 
+                        upsert: true,       
+                        new: true         
+                    }
+                );
                 if (!newProductSale) throw new ConflictRequestError('Error created product sale!')
-            })
+            }
         }
         const updatedSale = await saleModel.findByIdAndUpdate(_id, {
             $set: {

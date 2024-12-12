@@ -193,6 +193,7 @@ class CartService {
         const { user_id } = query
         const user = await userModel.findById(user_id).lean();
         if (!user) throw new NotFoundError('Not found user!');
+        const date = new Date()
         const carts = await cartModel.aggregate([
             { $match: { user_id: user._id } },
             {
@@ -223,7 +224,48 @@ class CartService {
                     from: COLLECTION_NAME_PRODUCT,
                     localField: 'product_variant.product_id',
                     foreignField: '_id',
-                    as: 'product'
+                    as: 'product',
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: COLLECTION_NAME_PRODUCT_SALE,
+                                localField: '_id',
+                                foreignField: 'product_id',
+                                as: 'product_sale',
+                                pipeline: [
+                                    {
+                                        $match: {
+                                            is_active: true
+                                        }
+                                    }, {
+                                        $lookup: {
+                                            from: COLLECTION_NAME_SALE,
+                                            localField: 'sale_id',
+                                            foreignField: '_id',
+                                            as: 'sale',
+                                            pipeline: [
+                                                {
+                                                    $match: {
+                                                        is_active: true,
+                                                        time_start: { $lt: date },
+                                                        time_end: { $gt: date }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }, {
+                                        $addFields: {
+                                            sale: { $arrayElemAt: ['$sale', 0] }
+                                        }
+                                    }
+                                ]
+                            }
+                        }, {
+                            $addFields: {
+                                product_sale: { $arrayElemAt: ['$product_sale', 0] }
+                            }
+                        }
+                    ]
                 }
             }, {
                 $addFields: {
@@ -265,9 +307,28 @@ class CartService {
                     },
                     is_delete_product: '$product.is_delete',
                     is_public_product: '$product.is_public',
-                    is_delete_variant: '$product_variant.is_delete'
+                    is_delete_variant: '$product_variant.is_delete',
+                    discount: {
+                        $cond: {
+                            if: {
+                                $and: [
+                                    { $ne: ['$product.product_sale.sale.discount', null] },
+                                    { $gt: ['$product.product_sale.sale.discount', 0] }
+                                ]
+                            },
+                            then: '$product.product_sale.sale.discount',
+                            else: 0
+                        }
+                    },
+                    can_be_plus: {
+                        $cond: {
+                            if: { $gte: ['$quantity', '$product_variant.quantity'] },
+                            then: false,
+                            else: true
+                        }
+                    }
                 }
-            },{
+            }, {
                 $match: {
                     is_delete_product: false,
                     is_public_product: true,
@@ -289,7 +350,9 @@ class CartService {
                     product_variant_id: '$product_variant._id',
                     is_delete_product: 1,
                     is_public_product: 1,
-                    is_delete_variant: 1
+                    is_delete_variant: 1,
+                    discount: 1,
+                    can_be_plus: 1
                 }
             }
         ])
@@ -313,7 +376,7 @@ class CartService {
             return selectFilesData({ fileds: ['_id', 'product_variant_id', 'quantity', 'user_id'], object: cartUpdate })
         }
         const newCart = await cartModel.create({ product_variant_id, quantity, user_id });
-        if (!newCart) throw new ConflictRequestError('Error created item cart')  
+        if (!newCart) throw new ConflictRequestError('Error created item cart')
         return selectFilesData({ fileds: ['_id', 'product_variant_id', 'quantity', 'user_id'], object: newCart })
     }
 }

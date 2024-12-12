@@ -17,6 +17,7 @@ const { COLLECTION_NAME_PRODUCT_SALE } = require("../models/product_sale.model")
 const { COLLECTION_NAME_CART } = require("../models/cart.model")
 const { COLLECTION_NAME_PRODUCT_ORDER } = require("../models/product_order.model")
 const { COLLECTION_NAME_ORDER } = require("../models/order.model")
+const { redis_client } = require("../configs/config.redis")
 const { ObjectId } = mongoose.Types
 
 class ProductService {
@@ -66,6 +67,7 @@ class ProductService {
                     },
                     { new: true },
                 )
+                await redis_client.set(element.product_variant_id, 0, { XX: true })
             }
             if (!updated_product_variant) throw new ConflictRequestError('Error conlifct update product variant!')
             arr_product_variants_update.push(updated_product_variant)
@@ -565,7 +567,7 @@ class ProductService {
                     'sales_active.discount': 1,
                     'sales_active.time_end': 1,
                     'sales_active.image_sale': { $arrayElemAt: ['$sales_active.image_sale.url', 0] },
-                    'sales_active._id': 1
+                    'sales_active._id': 1,
                 }
             }
         ])
