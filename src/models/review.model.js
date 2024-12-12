@@ -12,7 +12,7 @@ const reviewSchema = new mongoose.Schema({
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_USER, require: true },
     product_order_id: {type: mongoose.Schema.Types.ObjectId, ref: DOCUMENT_NAME_PRODUCT_ORDER, required: true}
 }, {
-    timeseries: true,
+    timestamps: true,
     collection: COLLECTION_NAME_REVIEW
 })
 

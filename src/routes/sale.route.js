@@ -12,5 +12,6 @@ router.put('/update_sale', upload.single('image'), uploadSingleImageMiddleware, 
 router.get('/get_detail_sale', asyncHandler(SaleController.getDetailSale))
 router.get('/get_categories_sale', asyncHandler(SaleController.getCategoriesSale))
 router.get('/get_products_sale', asyncHandler(SaleController.getProductsSale))
+router.get('/get_sale_update_detail', asyncHandler(SaleController.getDetailSaleUpdate))
 
 module.exports = router
