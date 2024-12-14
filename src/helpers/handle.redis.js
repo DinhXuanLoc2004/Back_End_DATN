@@ -15,11 +15,12 @@ async function handleResdis() {
     await redis_client.sendCommand(['CONFIG', 'SET', 'notify-keyspace-events', 'Ex']);
 
     await redis_subscriber.pSubscribe("__keyevent@0__:expired", async (message) => {
-        console.log(message);
-        const value = await redis_client.get(message)
-        if (value === VALUE_ORDER_ID_KEY) {
-            asyncHandler(await OrderService.cancelOrderPaymentDealine({order_id: message}))
-        }
+        asyncHandler(await OrderService.cancelOrderPaymentDealine({order_id: message}))
+        // console.log(message);
+        // const value = await redis_client.get(message)
+        // console.log(value);
+        // if (value === VALUE_ORDER_ID_KEY) {
+        // }
     });
 }
 

@@ -32,6 +32,7 @@ class VoucherService {
                     from: COLLECTION_NAME_VOUCHER_USER,
                     localField: '_id',
                     foreignField: 'voucher_id',
+                    as: 'voucher_users',
                     pipeline: [
                         {
                             $match: {
@@ -288,7 +289,8 @@ class VoucherService {
             voucher_name, voucher_description,
             voucher_type, voucher_value,
             voucher_code, image_voucher: image, time_start, time_end, quantity,
-            min_order_value, is_active: is_active ?? true, is_voucher_new_user: users ? true : is_voucher_new_user !== undefined ? is_voucher_new_user : false
+            min_order_value, is_active: is_active ?? true, 
+            is_voucher_new_user: users ? true : is_voucher_new_user !== undefined ? is_voucher_new_user : false
         })
         if (users) {
             const arr_users = JSON.parse(users)
