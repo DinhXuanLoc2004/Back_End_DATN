@@ -27,7 +27,7 @@ class SaleService {
                     pipeline: [
                         {
                             $match: {
-                                is_acitve: true
+                                is_active: true
                             }
                         },
                         {
