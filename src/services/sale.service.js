@@ -26,7 +26,9 @@ class SaleService {
                     as: 'product_sale',
                     pipeline: [
                         {
-                            is_acitve: true
+                            $match: {
+                                is_acitve: true
+                            }
                         },
                         {
                             $lookup: {
