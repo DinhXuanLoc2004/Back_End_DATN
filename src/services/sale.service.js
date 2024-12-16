@@ -26,6 +26,9 @@ class SaleService {
                     as: 'product_sale',
                     pipeline: [
                         {
+                            is_acitve: true
+                        },
+                        {
                             $lookup: {
                                 from: COLLECTION_NAME_PRODUCT,
                                 localField: 'product_id',
