@@ -1,7 +1,7 @@
 const { redis_client } = require("../configs/config.redis")
 const DurationsConstants = require("../constants/durations.constants")
 
-const VALUE_ORDER_ID_KEY = 'orde_id'
+const VALUE_ORDER_ID_KEY = 'order_id'
 
 class RedisService {
     static setExOrderID = async ({ order_id }) => {

@@ -930,6 +930,7 @@ class OrderService {
             delivery_fee, leadtime,
             payment_method,
             total_amount } = body
+            
         let orderUpdatedResponse = {}
 
         const order = await orderModel.findById(order_id).lean()

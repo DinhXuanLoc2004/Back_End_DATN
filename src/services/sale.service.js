@@ -251,7 +251,8 @@ class SaleService {
         const categories = await product_saleModel.aggregate([
             {
                 $match: {
-                    sale_id: sale_Obid
+                    sale_id: sale_Obid,
+                    is_active: true
                 }
             }, {
                 $lookup: {
@@ -301,7 +302,7 @@ class SaleService {
                 }
             }
         ])
-
+        console.log(categories);
         return categories[0].categories
     }
 
