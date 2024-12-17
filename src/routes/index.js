@@ -24,5 +24,6 @@ router.use(`${BASE_URL}/payment_method`, require('./payment_method.route'))
 router.use(`${BASE_URL}/order`, require('./order.route'))
 router.use(`${BASE_URL}/notify`, require('./notifycation.route'))
 router.use(`${BASE_URL}/admin`, require('../routes/admin.route'))
+router.use(`${BASE_URL}/dashboard`, require('../routes/dashboard.route'))
 
 module.exports = router
