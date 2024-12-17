@@ -26,6 +26,11 @@ class SaleService {
                     as: 'product_sale',
                     pipeline: [
                         {
+                            $match: {
+                                is_active: true
+                            }
+                        },
+                        {
                             $lookup: {
                                 from: COLLECTION_NAME_PRODUCT,
                                 localField: 'product_id',
@@ -246,7 +251,8 @@ class SaleService {
         const categories = await product_saleModel.aggregate([
             {
                 $match: {
-                    sale_id: sale_Obid
+                    sale_id: sale_Obid,
+                    is_active: true
                 }
             }, {
                 $lookup: {
@@ -296,7 +302,7 @@ class SaleService {
                 }
             }
         ])
-
+        console.log(categories);
         return categories[0].categories
     }
 

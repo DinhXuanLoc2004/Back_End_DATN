@@ -183,7 +183,7 @@ class CartService {
         const cart = await cartModel.findById(cart_id).lean()
         if (!cart) throw new NotFoundError('Item cart not found!')
         const cartUpdate = await cartModel.findByIdAndUpdate(cart_id, {
-            quantity: cart.quantity + value
+            quantity: value
         }, { new: true })
         if (!cartUpdate) throw new ConflictRequestError('Error update quantity item cart')
         return selectFilesData({ fileds: ['_id', 'product_variant', 'quantity', 'user_id', 'product_variant_id'], object: cartUpdate })

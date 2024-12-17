@@ -5,6 +5,19 @@ const { FailResponse } = require('../core/success.response');
 const { cartModel } = require("../models/cart.model");
 
 class CartMiddleWare {
+    static changeQuantity = asyncHandler(async (req, res, next) => {
+        const { cart_id, value } = req.body
+        const cart = await cartModel.findById(cart_id).lean()
+        const variant = await product_variantModel.findById(cart.product_variant_id).lean()
+        if (value > variant.quantity) {
+            return new FailResponse({
+                message: 'Invalid quantity',
+                metadata: cart.quantity
+            }).send(res)
+        }
+        next()
+    })
+
     static checkProductActive = asyncHandler(async (req, res, next) => {
         const { product_variant_id, quantity, user_id } = req.body
         const product_variant_Obid = convertToObjectId(product_variant_id)
