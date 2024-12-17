@@ -912,7 +912,7 @@ class ProductService {
         if (Array.isArray(colors_id) && colors_id.length > 0) {
             const colors_ObId = colors_id.filter(id => id !== '' && ObjectId.isValid(id)).map(id => convertToObjectId(id))
             if (colors_ObId.length > 0) {
-                matchFilter['colors._id'] = { $in: colors_ObId }
+                matchFilter['colors._id'] = { $in: colors_ObId }    
             }
         }
 
